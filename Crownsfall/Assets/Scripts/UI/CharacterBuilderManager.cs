@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Crownsfall.Characters;
+using Crownsfall.Combat;
 using Crownsfall.Core;
 using TMPro;
 using UnityEngine;
@@ -62,8 +63,12 @@ namespace Crownsfall.UI
         [Header("Fighter Name")]
         public TMP_InputField fighterNameInput;
 
+        [Header("Preview")]
+        [Tooltip("Optional layered preview rig. When assigned, individual preview Images below are skipped.")]
+        public FighterRig characterBuilderPreviewRig;
+
         [Header("Preview Images")]
-        [Tooltip("Images that show the currently selected equipment icon.")]
+        [Tooltip("Images that show the currently selected equipment icon. Used when characterBuilderPreviewRig is not assigned.")]
         public Image headPreviewImage;
         public Image bodyPreviewImage;
         public Image weaponPreviewImage;
@@ -230,9 +235,16 @@ namespace Crownsfall.UI
         private void RefreshHeadDisplay()
         {
             var head = GetItemAt(heads, headIndex);
-            UpdatePreviewImage(headPreviewImage, head?.icon);
+
+            // When a FighterRig is wired, it handles the full layered preview instead.
+            if (characterBuilderPreviewRig == null)
+            {
+                UpdatePreviewImage(headPreviewImage, head?.icon);
+            }
+
             UpdateNameText(headNameText, head);
             UpdateNavigationButtons(headPreviousButton, headNextButton, heads);
+            RefreshPreviewRig();
         }
 
         // --- Body selection ---
@@ -262,9 +274,15 @@ namespace Crownsfall.UI
         private void RefreshBodyDisplay()
         {
             var body = GetItemAt(bodies, bodyIndex);
-            UpdatePreviewImage(bodyPreviewImage, body?.icon);
+
+            if (characterBuilderPreviewRig == null)
+            {
+                UpdatePreviewImage(bodyPreviewImage, body?.icon);
+            }
+
             UpdateNameText(bodyNameText, body);
             UpdateNavigationButtons(bodyPreviousButton, bodyNextButton, bodies);
+            RefreshPreviewRig();
         }
 
         // --- Weapon selection ---
@@ -294,9 +312,15 @@ namespace Crownsfall.UI
         private void RefreshWeaponDisplay()
         {
             var weapon = GetItemAt(weapons, weaponIndex);
-            UpdatePreviewImage(weaponPreviewImage, weapon?.icon);
+
+            if (characterBuilderPreviewRig == null)
+            {
+                UpdatePreviewImage(weaponPreviewImage, weapon?.icon);
+            }
+
             UpdateNameText(weaponNameText, weapon);
             UpdateNavigationButtons(weaponPreviousButton, weaponNextButton, weapons);
+            RefreshPreviewRig();
         }
 
         // --- Mount selection ---
@@ -326,9 +350,39 @@ namespace Crownsfall.UI
         private void RefreshMountDisplay()
         {
             var mount = GetItemAt(mounts, mountIndex);
-            UpdatePreviewImage(mountPreviewImage, mount?.icon);
+
+            if (characterBuilderPreviewRig == null)
+            {
+                UpdatePreviewImage(mountPreviewImage, mount?.icon);
+            }
+
             UpdateNameText(mountNameText, mount);
             UpdateNavigationButtons(mountPreviousButton, mountNextButton, mounts);
+            RefreshPreviewRig();
+        }
+
+        /// <summary>
+        /// Builds a temporary PlayerFighter from the current equipment indices and shows it
+        /// on the Character Builder preview rig. This fighter exists only for the live preview —
+        /// it is not saved to FighterSessionData or sent to battle. We skip CalculateStats()
+        /// because the rig only needs equipment icon sprites, not combat numbers.
+        /// </summary>
+        private void RefreshPreviewRig()
+        {
+            if (characterBuilderPreviewRig == null)
+            {
+                return;
+            }
+
+            // Temporary preview fighter: copy selected equipment from each list index.
+            var previewFighter = new PlayerFighter();
+            previewFighter.head = GetItemAt(heads, headIndex);
+            previewFighter.body = GetItemAt(bodies, bodyIndex);
+            previewFighter.weapon = GetItemAt(weapons, weaponIndex);
+            previewFighter.mount = GetItemAt(mounts, mountIndex);
+
+            characterBuilderPreviewRig.Display(previewFighter);
+            characterBuilderPreviewRig.SetFacing(true);
         }
 
         // --- Create Fighter ---

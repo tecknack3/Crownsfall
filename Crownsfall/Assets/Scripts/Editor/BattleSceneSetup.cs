@@ -664,7 +664,7 @@ namespace Crownsfall.Editor
         }
 
         /// <summary>
-        /// Creates a FighterRig root with five stacked UI Image children.
+        /// Creates a FighterRig root with anchor → Image hierarchy (see FighterRig.cs comments).
         /// Player sits slightly lower-left; enemy slightly lower-right inside each slot.
         /// </summary>
         private static FighterRig CreateFighterRig(RectTransform slot, string rigName, bool isPlayer)
@@ -681,15 +681,64 @@ namespace Crownsfall.Editor
 
             var rig = rigRect.gameObject.AddComponent<FighterRig>();
 
-            var mountImage = CreateLayerImage(rigRect, "MountImage", LayerMountBodySize);
-            var bodyImage = CreateLayerImage(rigRect, "BodyImage", LayerMountBodySize);
-            var weaponImage = CreateLayerImage(rigRect, "WeaponImage", LayerWeaponSize);
-            var headImage = CreateLayerImage(rigRect, "HeadImage", LayerHeadSize);
-            var crownImage = CreateLayerImage(rigRect, "CrownImage", LayerCrownSize);
+            var mountAnchor = CreateEquipmentAnchor(rigRect, "MountAnchor");
+            var bodyAnchor = CreateEquipmentAnchor(rigRect, "BodyAnchor");
+            var weaponAnchor = CreateEquipmentAnchor(rigRect, "WeaponAnchor");
+            var headAnchor = CreateEquipmentAnchor(rigRect, "HeadAnchor");
+            var crownAnchor = CreateEquipmentAnchor(rigRect, "CrownAnchor");
 
-            WireFighterRig(rig, mountImage, bodyImage, weaponImage, headImage, crownImage);
+            // Future UI attachment points — empty RectTransforms for now.
+            var damageAnchor = CreateFutureAnchor(rigRect, "DamageAnchor");
+            var healthBarAnchor = CreateFutureAnchor(rigRect, "HealthBarAnchor");
+            var nameAnchor = CreateFutureAnchor(rigRect, "NameAnchor");
+
+            var mountImage = CreateLayerImage(mountAnchor, "MountImage", LayerMountBodySize);
+            var bodyImage = CreateLayerImage(bodyAnchor, "BodyImage", LayerMountBodySize);
+            var weaponImage = CreateLayerImage(weaponAnchor, "WeaponImage", LayerWeaponSize);
+            var headImage = CreateLayerImage(headAnchor, "HeadImage", LayerHeadSize);
+            var crownImage = CreateLayerImage(crownAnchor, "CrownImage", LayerCrownSize);
+
+            WireFighterRig(
+                rig,
+                mountAnchor,
+                bodyAnchor,
+                weaponAnchor,
+                headAnchor,
+                crownAnchor,
+                mountImage,
+                bodyImage,
+                weaponImage,
+                headImage,
+                crownImage,
+                damageAnchor,
+                healthBarAnchor,
+                nameAnchor);
 
             return rig;
+        }
+
+        /// <summary>
+        /// Empty anchor for one equipment layer. FighterRig.ApplyOffsets() moves this RectTransform.
+        /// </summary>
+        private static RectTransform CreateEquipmentAnchor(RectTransform parent, string anchorName)
+        {
+            var anchor = CreateRect(anchorName, parent);
+            anchor.anchorMin = new Vector2(0.5f, 0.5f);
+            anchor.anchorMax = new Vector2(0.5f, 0.5f);
+            anchor.pivot = new Vector2(0.5f, 0.5f);
+            anchor.anchoredPosition = Vector2.zero;
+            anchor.sizeDelta = Vector2.zero;
+            return anchor;
+        }
+
+        /// <summary>
+        /// Empty anchor reserved for future HUD elements on the rig (damage, health bar, name).
+        /// </summary>
+        private static RectTransform CreateFutureAnchor(RectTransform parent, string anchorName)
+        {
+            var anchor = CreateEquipmentAnchor(parent, anchorName);
+            anchor.SetAsLastSibling();
+            return anchor;
         }
 
         /// <summary>
@@ -730,18 +779,34 @@ namespace Crownsfall.Editor
 
         private static void WireFighterRig(
             FighterRig rig,
+            RectTransform mountAnchor,
+            RectTransform bodyAnchor,
+            RectTransform weaponAnchor,
+            RectTransform headAnchor,
+            RectTransform crownAnchor,
             Image mountImage,
             Image bodyImage,
             Image weaponImage,
             Image headImage,
-            Image crownImage)
+            Image crownImage,
+            RectTransform damageAnchor,
+            RectTransform healthBarAnchor,
+            RectTransform nameAnchor)
         {
             var serialized = new SerializedObject(rig);
+            serialized.FindProperty("mountAnchor").objectReferenceValue = mountAnchor;
+            serialized.FindProperty("bodyAnchor").objectReferenceValue = bodyAnchor;
+            serialized.FindProperty("weaponAnchor").objectReferenceValue = weaponAnchor;
+            serialized.FindProperty("headAnchor").objectReferenceValue = headAnchor;
+            serialized.FindProperty("crownAnchor").objectReferenceValue = crownAnchor;
             serialized.FindProperty("mountImage").objectReferenceValue = mountImage;
             serialized.FindProperty("bodyImage").objectReferenceValue = bodyImage;
             serialized.FindProperty("weaponImage").objectReferenceValue = weaponImage;
             serialized.FindProperty("headImage").objectReferenceValue = headImage;
             serialized.FindProperty("crownImage").objectReferenceValue = crownImage;
+            serialized.FindProperty("damageAnchor").objectReferenceValue = damageAnchor;
+            serialized.FindProperty("healthBarAnchor").objectReferenceValue = healthBarAnchor;
+            serialized.FindProperty("nameAnchor").objectReferenceValue = nameAnchor;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(rig);
         }
@@ -1009,7 +1074,8 @@ namespace Crownsfall.Editor
         }
 
         /// <summary>
-        /// Scales each equipment layer Image inside a rig by the +25% layout constants.
+        /// Scales each equipment Image inside a rig by the +25% layout constants.
+        /// Supports both anchor hierarchy (MountAnchor/MountImage) and legacy flat layout.
         /// </summary>
         private static void ApplyLayerSizes(Transform rigRoot)
         {
@@ -1018,21 +1084,22 @@ namespace Crownsfall.Editor
                 return;
             }
 
-            SetLayerSize(rigRoot, "MountImage", LayerMountBodySize);
-            SetLayerSize(rigRoot, "BodyImage", LayerMountBodySize);
-            SetLayerSize(rigRoot, "WeaponImage", LayerWeaponSize);
-            SetLayerSize(rigRoot, "HeadImage", LayerHeadSize);
-            SetLayerSize(rigRoot, "CrownImage", LayerCrownSize);
+            SetLayerSize(rigRoot, "MountAnchor", "MountImage", LayerMountBodySize);
+            SetLayerSize(rigRoot, "BodyAnchor", "BodyImage", LayerMountBodySize);
+            SetLayerSize(rigRoot, "WeaponAnchor", "WeaponImage", LayerWeaponSize);
+            SetLayerSize(rigRoot, "HeadAnchor", "HeadImage", LayerHeadSize);
+            SetLayerSize(rigRoot, "CrownAnchor", "CrownImage", LayerCrownSize);
         }
 
-        private static void SetLayerSize(Transform rigRoot, string layerName, float size)
+        private static void SetLayerSize(Transform rigRoot, string anchorName, string imageName, float size)
         {
-            var layer = rigRoot.Find(layerName) as RectTransform;
-            if (layer == null)
+            var imageTransform = rigRoot.Find($"{anchorName}/{imageName}") ?? rigRoot.Find(imageName);
+            if (imageTransform == null)
             {
                 return;
             }
 
+            var layer = imageTransform as RectTransform;
             layer.sizeDelta = new Vector2(size, size);
             EditorUtility.SetDirty(layer);
         }

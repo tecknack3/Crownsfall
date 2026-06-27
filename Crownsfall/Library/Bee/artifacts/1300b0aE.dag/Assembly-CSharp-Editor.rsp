@@ -389,6 +389,7 @@
 "Assets/Scripts/Editor/CharacterBuilderUIGenerator.cs"
 "Assets/Scripts/Editor/EquipmentImporter.cs"
 "Assets/Scripts/Editor/EquipmentSpriteAutoAssignWindow.cs"
+"Assets/Scripts/Editor/FighterRigHierarchyBuilder.cs"
 "Assets/Scripts/Editor/MissingScriptFinder.cs"
 -langversion:9.0
 /deterministic

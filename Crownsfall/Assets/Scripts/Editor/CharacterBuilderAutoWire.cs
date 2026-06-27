@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Crownsfall.Characters;
+using Crownsfall.Combat;
 using Crownsfall.UI;
 using TMPro;
 using UnityEditor;
@@ -124,6 +125,13 @@ namespace Crownsfall.Editor
                 "mountPreviewImage",
                 mainLayout,
                 "FighterPreview/PreviewStack/MountImage",
+                missing);
+
+            AssignComponentReference<FighterRig>(
+                serializedManager,
+                "characterBuilderPreviewRig",
+                mainLayout,
+                "FighterPreview",
                 missing);
 
             WireSelectorReferences(serializedManager, mainLayout, "HeadSelector", "head", missing);

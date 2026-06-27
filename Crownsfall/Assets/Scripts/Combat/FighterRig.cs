@@ -5,34 +5,59 @@ using UnityEngine.UI;
 namespace Crownsfall.Combat
 {
     /// <summary>
-    /// Shows one fighter on the battle screen using stacked UI Image layers.
-    /// Each layer is a RectTransform child (MountImage, BodyImage, WeaponImage, HeadImage, CrownImage).
-    /// BattleManager calls DisplayFighter to put equipment icons on the rig.
+    /// Reusable UI rig that displays one fighter using stacked equipment sprites.
+    /// Visual layers only — no battle logic, no HUD stats. Any screen (Battle, Character Builder, etc.)
+    /// can call Display() with a PlayerFighter to show the same layered look.
+    ///
+    /// Expected hierarchy (created by Tools → Fighter Tools → Setup Battle Scene Production UI):
+    ///
+    /// FighterRig                          ← this component lives on the root RectTransform
+    /// ├── MountAnchor                     ← offset moves the whole mount layer
+    /// │   └── MountImage                  ← UnityEngine.UI.Image (equipment sprite)
+    /// ├── BodyAnchor
+    /// │   └── BodyImage
+    /// ├── WeaponAnchor
+    /// │   └── WeaponImage
+    /// ├── HeadAnchor
+    /// │   └── HeadImage
+    /// ├── CrownAnchor                     ← optional crown above the head
+    /// │   └── CrownImage
+    /// ├── DamageAnchor                    ← empty; future floating damage numbers
+    /// ├── HealthBarAnchor                 ← empty; future per-fighter health bar on rig
+    /// └── NameAnchor                      ← empty; future name label on rig
     /// </summary>
     public class FighterRig : MonoBehaviour
     {
-        [Header("Image Layers (UI children)")]
-        [Tooltip("Back layer — mount sprite sits behind the body.")]
+        [Header("Equipment Anchors (offsets applied here)")]
+        [SerializeField] private RectTransform mountAnchor;
+        [SerializeField] private RectTransform bodyAnchor;
+        [SerializeField] private RectTransform weaponAnchor;
+        [SerializeField] private RectTransform headAnchor;
+        [SerializeField] private RectTransform crownAnchor;
+
+        [Header("Equipment Images (sprites assigned here)")]
         [SerializeField] private Image mountImage;
-
-        [Tooltip("Main body layer.")]
         [SerializeField] private Image bodyImage;
-
-        [Tooltip("Weapon held in front of the body.")]
         [SerializeField] private Image weaponImage;
-
-        [Tooltip("Head draws on top of the body.")]
         [SerializeField] private Image headImage;
-
-        [Tooltip("Optional crown above the head. Hidden when no sprite is assigned.")]
         [SerializeField] private Image crownImage;
 
-        [Header("Layer Offsets (anchoredPosition in UI pixels)")]
+        [Header("Future UI Anchors (empty for now)")]
+        [Tooltip("Parent for floating damage text — not used yet.")]
+        [SerializeField] private RectTransform damageAnchor;
+
+        [Tooltip("Parent for a health bar attached to this fighter — not used yet (BattleHUD owns bars today).")]
+        [SerializeField] private RectTransform healthBarAnchor;
+
+        [Tooltip("Parent for a name label above/below the fighter — not used yet.")]
+        [SerializeField] private RectTransform nameAnchor;
+
+        [Header("Layer Offsets (anchoredPosition on each anchor, in UI pixels)")]
         [Tooltip("How far the mount sits below the body center.")]
         public Vector2 mountOffset = new Vector2(0f, -80f);
 
-        [Tooltip("Body stays at the rig center.")]
-        public Vector2 bodyOffset = new Vector2(0f, 0f);
+        [Tooltip("Body stays at the rig center (usually 0, 0).")]
+        public Vector2 bodyOffset = Vector2.zero;
 
         [Tooltip("Weapon offset to the side of the body.")]
         public Vector2 weaponOffset = new Vector2(45f, 10f);
@@ -43,11 +68,11 @@ namespace Crownsfall.Combat
         [Tooltip("Crown sits above the head.")]
         public Vector2 crownOffset = new Vector2(0f, 100f);
 
-        // True = facing right (player). False = facing left (enemy).
         private bool _faceRight = true;
+        private bool _crownVisible;
 
         /// <summary>
-        /// Runs once when the rig loads. Sets preserveAspect on each Image and applies offsets.
+        /// Runs once when the rig loads. Configures images and positions each anchor.
         /// </summary>
         private void Awake()
         {
@@ -56,15 +81,17 @@ namespace Crownsfall.Combat
             ConfigureImage(weaponImage);
             ConfigureImage(headImage);
             ConfigureImage(crownImage);
-            ApplyLayerOffsets();
+            ApplyOffsets();
+            HideCrown();
         }
 
         /// <summary>
         /// Puts equipment icon sprites on each layer. Missing gear hides that layer cleanly.
+        /// Pass null to clear the rig.
         /// </summary>
-        public void DisplayFighter(PlayerFighter fighter)
+        public void Display(PlayerFighter fighter)
         {
-            ApplyLayerOffsets();
+            ApplyOffsets();
 
             if (fighter == null)
             {
@@ -77,7 +104,33 @@ namespace Crownsfall.Combat
             SetLayer(weaponImage, fighter.weapon?.icon);
             SetLayer(headImage, fighter.head?.icon);
 
-            // PlayerFighter has no crown slot yet — hide crown unless we add one later.
+            // PlayerFighter has no crown slot yet — keep crown hidden unless ShowCrown() is called.
+            if (!_crownVisible)
+            {
+                SetLayer(crownImage, null);
+            }
+        }
+
+        /// <summary>
+        /// Shows the crown layer. Assign a crown sprite on CrownImage in the Inspector, or extend
+        /// Display() later when PlayerFighter gains a crown slot.
+        /// </summary>
+        public void ShowCrown()
+        {
+            _crownVisible = true;
+
+            if (crownImage != null && crownImage.sprite != null)
+            {
+                crownImage.enabled = true;
+            }
+        }
+
+        /// <summary>
+        /// Hides the crown layer regardless of any assigned sprite.
+        /// </summary>
+        public void HideCrown()
+        {
+            _crownVisible = false;
             SetLayer(crownImage, null);
         }
 
@@ -96,7 +149,7 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
-        /// Tints every visible layer (e.g. reddish for the enemy Training Dummy).
+        /// Tints every equipment layer (e.g. reddish for the enemy Training Dummy).
         /// Pass Color.white to restore original sprite colors.
         /// </summary>
         public void SetColorTint(Color tint)
@@ -109,19 +162,20 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
-        /// Moves each layer child to its configured offset so parts stack correctly.
+        /// Moves each equipment anchor to its configured offset so parts stack correctly.
+        /// Call after changing offsets at runtime, or from the Inspector via a custom editor later.
         /// </summary>
-        public void ApplyLayerOffsets()
+        public void ApplyOffsets()
         {
-            SetLayerAnchoredPosition(mountImage, mountOffset);
-            SetLayerAnchoredPosition(bodyImage, bodyOffset);
-            SetLayerAnchoredPosition(weaponImage, weaponOffset);
-            SetLayerAnchoredPosition(headImage, headOffset);
-            SetLayerAnchoredPosition(crownImage, crownOffset);
+            SetAnchorPosition(mountAnchor, mountOffset);
+            SetAnchorPosition(bodyAnchor, bodyOffset);
+            SetAnchorPosition(weaponAnchor, weaponOffset);
+            SetAnchorPosition(headAnchor, headOffset);
+            SetAnchorPosition(crownAnchor, crownOffset);
         }
 
         /// <summary>
-        /// Clears all sprites and hides every layer.
+        /// Clears all sprites and hides every equipment layer.
         /// </summary>
         public void ClearAllLayers()
         {
@@ -130,6 +184,7 @@ namespace Crownsfall.Combat
             SetLayer(weaponImage, null);
             SetLayer(headImage, null);
             SetLayer(crownImage, null);
+            _crownVisible = false;
         }
 
         /// <summary>
@@ -160,15 +215,14 @@ namespace Crownsfall.Combat
             image.enabled = sprite != null;
         }
 
-        private static void SetLayerAnchoredPosition(Image image, Vector2 offset)
+        private static void SetAnchorPosition(RectTransform anchor, Vector2 offset)
         {
-            if (image == null)
+            if (anchor == null)
             {
                 return;
             }
 
-            var rect = image.rectTransform;
-            rect.anchoredPosition = offset;
+            anchor.anchoredPosition = offset;
         }
 
         private static void ApplyTint(Image image, Color tint)

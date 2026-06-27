@@ -187,7 +187,7 @@ namespace Crownsfall.Combat
         {
             if (playerFighterRig != null)
             {
-                playerFighterRig.DisplayFighter(_playerFighter);
+                playerFighterRig.Display(_playerFighter);
                 playerFighterRig.SetFacing(true);
                 playerFighterRig.SetColorTint(Color.white);
             }
@@ -199,7 +199,7 @@ namespace Crownsfall.Combat
                     ? BuildEnemyDisplayFighter(_playerFighter)
                     : _enemyFighter;
 
-                enemyFighterRig.DisplayFighter(enemyDisplay);
+                enemyFighterRig.Display(enemyDisplay);
                 enemyFighterRig.SetFacing(false);
                 enemyFighterRig.SetColorTint(enemyTint);
             }
