@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d06ab6b8b8909447ea54d1435e940b76, type: 3}
+  m_Name: skeleton_horse_mount
+  m_EditorClassIdentifier: 
+  id: MOUNT_020
+  itemName: Skeleton Horse Mount
+  icon: {fileID: 21300000, guid: 8a0f9941e3e434925ab3cf82e560ea62, type: 3}
+  equipmentType: 3
+  rarity: 0
+  attack: 0
+  defense: 2
+  speed: 8
+  unlockLevel: 0
+  unlockedByDefault: 0
+  purchaseCost: 0
+  description: 
