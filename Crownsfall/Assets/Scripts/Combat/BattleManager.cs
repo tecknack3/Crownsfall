@@ -9,7 +9,7 @@ namespace Crownsfall.Combat
     /// <summary>
     /// Entry point for the Battle scene. Loads the player's fighter from GameSession,
     /// shows both fighters on UI FighterRigs, fills the BattleHUD overlay, and runs
-    /// a simple auto-combat loop until one fighter is defeated.
+    /// endless auto-combat waves until the player is defeated.
     /// </summary>
     public class BattleManager : MonoBehaviour
     {
@@ -43,8 +43,16 @@ namespace Crownsfall.Combat
         [Tooltip("Seconds between each attack in the auto-combat loop.")]
         [SerializeField] private float attackInterval = 0.8f;
 
+        [Tooltip("Seconds to wait after an enemy dies before the next wave spawns.")]
+        [SerializeField] private float waveTransitionDelay = 1.2f;
+
         private PlayerFighter _playerFighter;
         private PlayerFighter _enemyFighter;
+
+        /// <summary>
+        /// Current wave number. Starts at 1 and increases each time an enemy is defeated.
+        /// </summary>
+        private int _waveNumber = 1;
 
         /// <summary>
         /// When false, the combat coroutine stops taking new turns.
@@ -60,7 +68,8 @@ namespace Crownsfall.Combat
             FindSceneReferencesIfNeeded();
 
             _playerFighter = BuildPlayerFighter();
-            _enemyFighter = CreatePlaceholderEnemy();
+            _enemyFighter = new PlayerFighter();
+            SpawnEnemyForWave(_waveNumber);
 
             DisplayFighters();
             PopulateBattleUI();
@@ -75,7 +84,7 @@ namespace Crownsfall.Combat
         public PlayerFighter PlayerFighter => _playerFighter;
 
         /// <summary>
-        /// Returns the placeholder enemy fighter (read-only for other scripts later).
+        /// Returns the current wave enemy fighter (read-only for other scripts later).
         /// </summary>
         public PlayerFighter EnemyFighter => _enemyFighter;
 
@@ -95,50 +104,119 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
-        /// Auto-combat: player attacks, pause, enemy attacks (if alive), pause, repeat.
-        /// Stops when either fighter's health reaches 0.
+        /// Endless auto-combat: player attacks, pause, enemy attacks (if alive), pause, repeat.
+        /// When an enemy dies, score increases and the next wave spawns after a short delay.
+        /// Stops only when the player reaches 0 HP.
         /// </summary>
         private IEnumerator StartBattleLoop()
         {
             _combatRunning = true;
 
-            while (_combatRunning && _playerFighter.isAlive && _enemyFighter.isAlive)
+            // Outer loop: keep spawning waves until the player is defeated.
+            while (_combatRunning && _playerFighter.isAlive)
             {
-                // --- Player turn ---
-                var playerDamage = CalculateDamage(_playerFighter, _enemyFighter);
-                _enemyFighter.TakeDamage(playerDamage);
-
-                UpdateEnemyHealthDisplay();
-                LogCombatMessage($"Player dealt {playerDamage} damage!");
-
-                if (!_enemyFighter.isAlive)
+                // Inner loop: trade blows with the current wave's enemy.
+                while (_combatRunning && _playerFighter.isAlive && _enemyFighter.isAlive)
                 {
-                    HandleEnemyDefeated();
-                    yield break;
+                    // --- Player turn ---
+                    var playerDamage = CalculateDamage(_playerFighter, _enemyFighter);
+                    _enemyFighter.TakeDamage(playerDamage);
+
+                    UpdateEnemyHealthDisplay();
+                    LogCombatMessage($"Player dealt {playerDamage} damage!");
+
+                    if (!_enemyFighter.isAlive)
+                    {
+                        // Award score, wait, spawn the next enemy, then continue fighting.
+                        yield return HandleEnemyDefeatedAndAdvanceWave();
+                        break;
+                    }
+
+                    yield return new WaitForSeconds(attackInterval);
+
+                    if (!_combatRunning || !_enemyFighter.isAlive)
+                    {
+                        break;
+                    }
+
+                    // --- Enemy turn (only if still alive) ---
+                    var enemyDamage = CalculateDamage(_enemyFighter, _playerFighter);
+                    _playerFighter.TakeDamage(enemyDamage);
+
+                    UpdatePlayerHealthDisplay();
+                    LogCombatMessage($"Enemy dealt {enemyDamage} damage!");
+
+                    if (!_playerFighter.isAlive)
+                    {
+                        HandlePlayerDefeated();
+                        yield break;
+                    }
+
+                    yield return new WaitForSeconds(attackInterval);
                 }
-
-                yield return new WaitForSeconds(attackInterval);
-
-                if (!_combatRunning || !_enemyFighter.isAlive)
-                {
-                    yield break;
-                }
-
-                // --- Enemy turn (only if still alive) ---
-                var enemyDamage = CalculateDamage(_enemyFighter, _playerFighter);
-                _playerFighter.TakeDamage(enemyDamage);
-
-                UpdatePlayerHealthDisplay();
-                LogCombatMessage($"Enemy dealt {enemyDamage} damage!");
-
-                if (!_playerFighter.isAlive)
-                {
-                    HandlePlayerDefeated();
-                    yield break;
-                }
-
-                yield return new WaitForSeconds(attackInterval);
             }
+        }
+
+        /// <summary>
+        /// Sets enemy stats for a given wave using the endless scaling formulas.
+        /// Resets the enemy to full health and marks them alive.
+        /// </summary>
+        private void SpawnEnemyForWave(int wave)
+        {
+            var enemyName = "Training Dummy " + wave;
+            var enemyAttack = 5 + wave;
+            var enemyDefense = 2 + Mathf.FloorToInt(wave * 0.5f);
+            var enemySpeed = 1 + Mathf.FloorToInt(wave * 0.25f);
+            var enemyMaxHealth = 100 + wave * 20;
+
+            _enemyFighter.fighterName = enemyName;
+            _enemyFighter.attack = enemyAttack;
+            _enemyFighter.defense = enemyDefense;
+            _enemyFighter.speed = enemySpeed;
+            _enemyFighter.maxHealth = enemyMaxHealth;
+            _enemyFighter.currentHealth = enemyMaxHealth;
+            _enemyFighter.isAlive = true;
+        }
+
+        /// <summary>
+        /// Called when the current wave enemy reaches 0 HP.
+        /// Adds score, waits, spawns the next wave, and updates HUD + enemy rig.
+        /// Combat keeps running — only player death stops the loop.
+        /// </summary>
+        private IEnumerator HandleEnemyDefeatedAndAdvanceWave()
+        {
+            LogCombatMessage("Enemy defeated! Score +1");
+
+            _playerFighter.AddScore(1);
+
+            if (battleHUD != null)
+            {
+                battleHUD.SetScore(_playerFighter.currentScore);
+            }
+
+            yield return new WaitForSeconds(waveTransitionDelay);
+
+            _waveNumber++;
+            SpawnEnemyForWave(_waveNumber);
+
+            if (battleHUD != null)
+            {
+                battleHUD.SetWave(_waveNumber);
+            }
+
+            UpdateEnemyHealthDisplay();
+            DisplayEnemyFighter();
+
+            LogCombatMessage($"Wave {_waveNumber} begins!");
+        }
+
+        /// <summary>
+        /// Called when the player reaches 0 HP. Stops combat and shows the final score.
+        /// </summary>
+        private void HandlePlayerDefeated()
+        {
+            _combatRunning = false;
+            LogCombatMessage($"Fighter defeated! Final Score: {_playerFighter.currentScore}");
         }
 
         /// <summary>
@@ -147,31 +225,6 @@ namespace Crownsfall.Combat
         private static int CalculateDamage(PlayerFighter attacker, PlayerFighter defender)
         {
             return Mathf.Max(1, attacker.attack - defender.defense);
-        }
-
-        /// <summary>
-        /// Called when the Training Dummy reaches 0 HP. Awards score and ends combat.
-        /// </summary>
-        private void HandleEnemyDefeated()
-        {
-            _combatRunning = false;
-            LogCombatMessage("Enemy defeated!");
-
-            _playerFighter.AddScore(1);
-
-            if (battleHUD != null)
-            {
-                battleHUD.SetScore(_playerFighter.currentScore);
-            }
-        }
-
-        /// <summary>
-        /// Called when the player reaches 0 HP. Ends combat with no score change.
-        /// </summary>
-        private void HandlePlayerDefeated()
-        {
-            _combatRunning = false;
-            LogCombatMessage("Fighter defeated!");
         }
 
         /// <summary>
@@ -297,23 +350,6 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
-        /// Creates a Training Dummy with fixed stats (no equipment).
-        /// Stats are set manually because CalculateStats only works from gear.
-        /// </summary>
-        private static PlayerFighter CreatePlaceholderEnemy()
-        {
-            return new PlayerFighter
-            {
-                fighterName = "Training Dummy",
-                attack = 5,
-                defense = 2,
-                speed = 1,
-                maxHealth = 100,
-                currentHealth = 100
-            };
-        }
-
-        /// <summary>
         /// Builds a fighter from the test fields wired in the Inspector.
         /// </summary>
         private PlayerFighter BuildTestFighter()
@@ -359,42 +395,51 @@ namespace Crownsfall.Combat
                 playerFighterRig.SetColorTint(Color.white);
             }
 
-            if (enemyFighterRig != null)
-            {
-                // Dummy has no gear by default; optional mirror uses player sprites for a quick visual test.
-                var enemyDisplay = enemyMirrorPlayerAppearance
-                    ? BuildEnemyDisplayFighter(_playerFighter)
-                    : _enemyFighter;
-
-                enemyFighterRig.Display(enemyDisplay);
-                enemyFighterRig.SetFacing(false);
-                enemyFighterRig.SetColorTint(enemyTint);
-            }
+            DisplayEnemyFighter();
         }
 
         /// <summary>
-        /// Keeps Training Dummy stats but borrows player equipment icons when mirroring is enabled.
+        /// Refreshes only the enemy FighterRig (called after each new wave spawns).
         /// </summary>
-        private static PlayerFighter BuildEnemyDisplayFighter(PlayerFighter player)
+        private void DisplayEnemyFighter()
         {
-            var display = new PlayerFighter
+            if (enemyFighterRig == null)
             {
-                fighterName = "Training Dummy",
+                return;
+            }
+
+            // Dummy has no gear by default; optional mirror uses player sprites for a quick visual test.
+            var enemyDisplay = enemyMirrorPlayerAppearance
+                ? BuildEnemyDisplayFighter(_playerFighter)
+                : _enemyFighter;
+
+            enemyFighterRig.Display(enemyDisplay);
+            enemyFighterRig.SetFacing(false);
+            enemyFighterRig.SetColorTint(enemyTint);
+        }
+
+        /// <summary>
+        /// Keeps wave enemy stats/name but borrows player equipment icons when mirroring is enabled.
+        /// </summary>
+        private PlayerFighter BuildEnemyDisplayFighter(PlayerFighter player)
+        {
+            return new PlayerFighter
+            {
+                fighterName = _enemyFighter.fighterName,
                 head = player?.head,
                 body = player?.body,
                 weapon = player?.weapon,
                 mount = player?.mount,
-                attack = 5,
-                defense = 2,
-                speed = 1,
-                maxHealth = 100,
-                currentHealth = 100
+                attack = _enemyFighter.attack,
+                defense = _enemyFighter.defense,
+                speed = _enemyFighter.speed,
+                maxHealth = _enemyFighter.maxHealth,
+                currentHealth = _enemyFighter.currentHealth
             };
-            return display;
         }
 
         /// <summary>
-        /// Fills stat blocks, health bars, and the first battle log line.
+        /// Fills stat blocks, health bars, wave/score, and the first battle log line.
         /// </summary>
         private void PopulateBattleUI()
         {
@@ -416,7 +461,7 @@ namespace Crownsfall.Combat
         private void LogBattleStart()
         {
             Debug.Log(
-                $"Battle started! Player: {_playerFighter.fighterName} " +
+                $"Battle started! Wave {_waveNumber} — Player: {_playerFighter.fighterName} " +
                 $"(ATK {_playerFighter.attack}, DEF {_playerFighter.defense}, " +
                 $"SPD {_playerFighter.speed}, HP {_playerFighter.maxHealth}) " +
                 $"vs Enemy: {_enemyFighter.fighterName} " +
