@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using Crownsfall.Characters;
+using Crownsfall.Core;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Crownsfall.UI
@@ -17,6 +19,24 @@ namespace Crownsfall.UI
         public static BodySO SelectedBody { get; set; }
         public static WeaponSO SelectedWeapon { get; set; }
         public static MountSO SelectedMount { get; set; }
+
+        /// <summary>
+        /// Full fighter built on the Character Builder screen. Battle scene reads this first.
+        /// </summary>
+        public static PlayerFighter CurrentFighter { get; set; }
+
+        /// <summary>
+        /// True when the player has created a fighter or chosen equipment this session.
+        /// </summary>
+        public static bool HasSessionData()
+        {
+            return CurrentFighter != null
+                || !string.IsNullOrEmpty(FighterName)
+                || SelectedHead != null
+                || SelectedBody != null
+                || SelectedWeapon != null
+                || SelectedMount != null;
+        }
     }
 
     /// <summary>
@@ -346,6 +366,7 @@ namespace Crownsfall.UI
             FighterSessionData.SelectedBody = body;
             FighterSessionData.SelectedWeapon = weapon;
             FighterSessionData.SelectedMount = mount;
+            FighterSessionData.CurrentFighter = _currentFighter;
 
             // Show the confirmation card with preview images and stats.
             ShowFighterCardPanel(_currentFighter);
@@ -410,15 +431,60 @@ namespace Crownsfall.UI
         }
 
         /// <summary>
-        /// Placeholder for future battle flow — logs only for now.
+        /// Saves the current fighter to GameSession and loads the Battle scene.
         /// </summary>
         private void OnStartBattleClicked()
         {
-            var fighterName = _currentFighter != null
-                ? _currentFighter.fighterName
-                : FighterSessionData.FighterName ?? "Unknown";
+            // Make sure we have a fighter (build from UI if Create was skipped).
+            var fighter = EnsureCurrentFighter();
+            if (fighter == null)
+            {
+                Debug.LogWarning("Start Battle: no fighter to send. Create a fighter first.");
+                return;
+            }
 
-            Debug.Log($"Start Battle clicked for fighter: {fighterName}");
+            // Store the fighter so BattleScene can read it after the scene loads.
+            GameSession.Instance.SetCurrentFighter(fighter);
+
+            Debug.Log($"Start Battle: loading BattleScene for {fighter.fighterName}");
+            SceneManager.LoadScene("BattleScene");
+        }
+
+        /// <summary>
+        /// Returns _currentFighter, or builds one from the current UI selections if needed.
+        /// </summary>
+        private PlayerFighter EnsureCurrentFighter()
+        {
+            if (_currentFighter != null)
+            {
+                return _currentFighter;
+            }
+
+            if (FighterSessionData.CurrentFighter != null)
+            {
+                _currentFighter = FighterSessionData.CurrentFighter;
+                return _currentFighter;
+            }
+
+            // Build from whatever is selected on screen (same logic as Create Fighter).
+            var fighterName = fighterNameInput != null
+                ? fighterNameInput.text.Trim()
+                : string.Empty;
+
+            if (string.IsNullOrEmpty(fighterName))
+            {
+                fighterName = "Unnamed Fighter";
+            }
+
+            _currentFighter = new PlayerFighter();
+            _currentFighter.fighterName = fighterName;
+            _currentFighter.head = GetItemAt(heads, headIndex);
+            _currentFighter.body = GetItemAt(bodies, bodyIndex);
+            _currentFighter.weapon = GetItemAt(weapons, weaponIndex);
+            _currentFighter.mount = GetItemAt(mounts, mountIndex);
+            _currentFighter.CalculateStats();
+
+            return _currentFighter;
         }
 
         // --- Shared UI helpers ---
