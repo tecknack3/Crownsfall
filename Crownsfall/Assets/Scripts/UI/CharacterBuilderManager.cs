@@ -21,7 +21,7 @@ namespace Crownsfall.UI
 
     /// <summary>
     /// Controls the Character Builder UI: equipment lists, preview images,
-    /// name labels, and the Create Fighter button.
+    /// name labels, Create Fighter button, and the Fighter Card confirmation panel.
     /// Wire all public fields in the Inspector to your scene objects.
     /// </summary>
     public class CharacterBuilderManager : MonoBehaviour
@@ -68,16 +68,44 @@ namespace Crownsfall.UI
         [Header("Actions")]
         public Button createFighterButton;
 
+        [Header("Fighter Card Panel")]
+        [Tooltip("Full-screen overlay shown after Create Fighter. Wire to Canvas/MainLayout/FighterCardPanel.")]
+        public GameObject fighterCardPanel;
+
+        [Tooltip("Card preview stack (back to front): mount, body, weapon, head.")]
+        public Image cardMountImage;
+        public Image cardBodyImage;
+        public Image cardWeaponImage;
+        public Image cardHeadImage;
+
+        public TMP_Text cardFighterNameText;
+        public TMP_Text cardAttackText;
+        public TMP_Text cardDefenseText;
+        public TMP_Text cardSpeedText;
+        public TMP_Text cardHealthText;
+
+        public Button startBattleButton;
+        public Button backEditButton;
+
         // Tracks which item is currently selected in each list (starts at 0).
         private int headIndex;
         private int bodyIndex;
         private int weaponIndex;
         private int mountIndex;
 
+        // The fighter created on the last Create Fighter click.
+        private PlayerFighter _currentFighter;
+
         private void Start()
         {
             // Hook up button clicks so the manager responds to player input.
             WireButtonListeners();
+
+            // Fighter card starts hidden until the player creates a fighter.
+            if (fighterCardPanel != null)
+            {
+                fighterCardPanel.SetActive(false);
+            }
 
             // Begin on the first item in every list.
             headIndex = 0;
@@ -93,7 +121,7 @@ namespace Crownsfall.UI
         }
 
         /// <summary>
-        /// Connects each Previous/Next and Create button to its handler method.
+        /// Connects each Previous/Next, Create, and Fighter Card button to its handler.
         /// </summary>
         private void WireButtonListeners()
         {
@@ -140,6 +168,16 @@ namespace Crownsfall.UI
             if (createFighterButton != null)
             {
                 createFighterButton.onClick.AddListener(OnCreateFighterClicked);
+            }
+
+            if (startBattleButton != null)
+            {
+                startBattleButton.onClick.AddListener(OnStartBattleClicked);
+            }
+
+            if (backEditButton != null)
+            {
+                backEditButton.onClick.AddListener(OnBackEditClicked);
             }
         }
 
@@ -294,13 +332,13 @@ namespace Crownsfall.UI
             var mount = GetItemAt(mounts, mountIndex);
 
             // Build the fighter and calculate stats from equipment.
-            var fighter = new PlayerFighter();
-            fighter.fighterName = fighterName;
-            fighter.head = head;
-            fighter.body = body;
-            fighter.weapon = weapon;
-            fighter.mount = mount;
-            fighter.CalculateStats();
+            _currentFighter = new PlayerFighter();
+            _currentFighter.fighterName = fighterName;
+            _currentFighter.head = head;
+            _currentFighter.body = body;
+            _currentFighter.weapon = weapon;
+            _currentFighter.mount = mount;
+            _currentFighter.CalculateStats();
 
             // Store choices so other scenes can use them later.
             FighterSessionData.FighterName = fighterName;
@@ -309,17 +347,78 @@ namespace Crownsfall.UI
             FighterSessionData.SelectedWeapon = weapon;
             FighterSessionData.SelectedMount = mount;
 
-            Debug.Log(
-                $"Fighter Created:\n" +
-                $"  Name: {fighter.fighterName}\n" +
-                $"  Head: {fighter.head?.itemName ?? "None"}\n" +
-                $"  Body: {fighter.body?.itemName ?? "None"}\n" +
-                $"  Weapon: {fighter.weapon?.itemName ?? "None"}\n" +
-                $"  Mount: {fighter.mount?.itemName ?? "None"}\n" +
-                $"  Attack: {fighter.attack}\n" +
-                $"  Defense: {fighter.defense}\n" +
-                $"  Speed: {fighter.speed}\n" +
-                $"  Max Health: {fighter.maxHealth}");
+            // Show the confirmation card with preview images and stats.
+            ShowFighterCardPanel(_currentFighter);
+        }
+
+        /// <summary>
+        /// Fills the fighter card UI and shows the overlay panel.
+        /// </summary>
+        private void ShowFighterCardPanel(PlayerFighter fighter)
+        {
+            if (fighter == null)
+            {
+                return;
+            }
+
+            // Card preview uses the same equipment icons as the builder preview.
+            UpdatePreviewImage(cardMountImage, fighter.mount?.icon);
+            UpdatePreviewImage(cardBodyImage, fighter.body?.icon);
+            UpdatePreviewImage(cardWeaponImage, fighter.weapon?.icon);
+            UpdatePreviewImage(cardHeadImage, fighter.head?.icon);
+
+            if (cardFighterNameText != null)
+            {
+                cardFighterNameText.text = fighter.fighterName;
+            }
+
+            if (cardAttackText != null)
+            {
+                cardAttackText.text = $"Attack: {fighter.attack}";
+            }
+
+            if (cardDefenseText != null)
+            {
+                cardDefenseText.text = $"Defense: {fighter.defense}";
+            }
+
+            if (cardSpeedText != null)
+            {
+                cardSpeedText.text = $"Speed: {fighter.speed}";
+            }
+
+            if (cardHealthText != null)
+            {
+                cardHealthText.text = $"Health: {fighter.maxHealth}";
+            }
+
+            if (fighterCardPanel != null)
+            {
+                fighterCardPanel.SetActive(true);
+            }
+        }
+
+        /// <summary>
+        /// Hides the fighter card and returns to the builder screen.
+        /// </summary>
+        private void OnBackEditClicked()
+        {
+            if (fighterCardPanel != null)
+            {
+                fighterCardPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Placeholder for future battle flow — logs only for now.
+        /// </summary>
+        private void OnStartBattleClicked()
+        {
+            var fighterName = _currentFighter != null
+                ? _currentFighter.fighterName
+                : FighterSessionData.FighterName ?? "Unknown";
+
+            Debug.Log($"Start Battle clicked for fighter: {fighterName}");
         }
 
         // --- Shared UI helpers ---

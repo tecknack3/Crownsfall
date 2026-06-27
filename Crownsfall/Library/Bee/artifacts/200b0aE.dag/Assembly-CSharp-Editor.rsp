@@ -378,6 +378,7 @@
 -analyzer:"/Applications/Unity/Hub/Editor/2022.3.26f1/Unity.app/Contents/Tools/Unity.SourceGenerators/Unity.SourceGenerators.dll"
 "Assets/Scripts/Editor/BodyScriptableObjectGenerator.cs"
 "Assets/Scripts/Editor/CharacterBuilderAutoWire.cs"
+"Assets/Scripts/Editor/CharacterBuilderFighterCardSetup.cs"
 "Assets/Scripts/Editor/CharacterBuilderSceneSetup.cs"
 "Assets/Scripts/Editor/CharacterBuilderUIGenerator.cs"
 "Assets/Scripts/Editor/EquipmentImporter.cs"

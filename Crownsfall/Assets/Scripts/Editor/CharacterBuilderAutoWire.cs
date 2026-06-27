@@ -144,6 +144,114 @@ namespace Crownsfall.Editor
                 mainLayout,
                 "CreateFighterButton",
                 missing);
+
+            WireFighterCardReferences(serializedManager, mainLayout, missing);
+        }
+
+        private static void WireFighterCardReferences(
+            SerializedObject serializedManager,
+            Transform mainLayout,
+            List<string> missing)
+        {
+            AssignGameObjectReference(
+                serializedManager,
+                "fighterCardPanel",
+                mainLayout,
+                "FighterCardPanel",
+                missing);
+
+            AssignComponentReference<Image>(
+                serializedManager,
+                "cardMountImage",
+                mainLayout,
+                "FighterCardPanel/Content/CardPreviewArea/CardMountImage",
+                missing);
+            AssignComponentReference<Image>(
+                serializedManager,
+                "cardBodyImage",
+                mainLayout,
+                "FighterCardPanel/Content/CardPreviewArea/CardBodyImage",
+                missing);
+            AssignComponentReference<Image>(
+                serializedManager,
+                "cardWeaponImage",
+                mainLayout,
+                "FighterCardPanel/Content/CardPreviewArea/CardWeaponImage",
+                missing);
+            AssignComponentReference<Image>(
+                serializedManager,
+                "cardHeadImage",
+                mainLayout,
+                "FighterCardPanel/Content/CardPreviewArea/CardHeadImage",
+                missing);
+
+            AssignComponentReference<TMP_Text>(
+                serializedManager,
+                "cardFighterNameText",
+                mainLayout,
+                "FighterCardPanel/Content/CardFighterNameText",
+                missing);
+            AssignComponentReference<TMP_Text>(
+                serializedManager,
+                "cardAttackText",
+                mainLayout,
+                "FighterCardPanel/Content/StatsPanel/CardAttackText",
+                missing);
+            AssignComponentReference<TMP_Text>(
+                serializedManager,
+                "cardDefenseText",
+                mainLayout,
+                "FighterCardPanel/Content/StatsPanel/CardDefenseText",
+                missing);
+            AssignComponentReference<TMP_Text>(
+                serializedManager,
+                "cardSpeedText",
+                mainLayout,
+                "FighterCardPanel/Content/StatsPanel/CardSpeedText",
+                missing);
+            AssignComponentReference<TMP_Text>(
+                serializedManager,
+                "cardHealthText",
+                mainLayout,
+                "FighterCardPanel/Content/StatsPanel/CardHealthText",
+                missing);
+
+            AssignComponentReference<Button>(
+                serializedManager,
+                "startBattleButton",
+                mainLayout,
+                "FighterCardPanel/Content/ButtonRow/StartBattleButton",
+                missing);
+            AssignComponentReference<Button>(
+                serializedManager,
+                "backEditButton",
+                mainLayout,
+                "FighterCardPanel/Content/ButtonRow/BackEditButton",
+                missing);
+        }
+
+        private static void AssignGameObjectReference(
+            SerializedObject serializedManager,
+            string propertyName,
+            Transform root,
+            string relativePath,
+            List<string> missing)
+        {
+            var transform = FindTransform(root, relativePath);
+            if (transform == null)
+            {
+                missing.Add(propertyName + " (GameObject not found: " + relativePath + ")");
+                return;
+            }
+
+            var property = serializedManager.FindProperty(propertyName);
+            if (property == null)
+            {
+                missing.Add(propertyName + " (SerializedProperty not found on CharacterBuilderManager)");
+                return;
+            }
+
+            property.objectReferenceValue = transform.gameObject;
         }
 
         private static void WireSelectorReferences(
