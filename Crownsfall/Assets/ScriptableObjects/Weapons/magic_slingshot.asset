@@ -17,9 +17,9 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: a2b42b58d5e1e4990a0fe558cd3526c0, type: 3}
   equipmentType: 2
   rarity: 0
-  attack: 0
+  attack: 10
   defense: 0
-  speed: 0
+  speed: 2
   unlockLevel: 0
   unlockedByDefault: 0
   purchaseCost: 0

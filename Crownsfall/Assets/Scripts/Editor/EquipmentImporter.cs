@@ -17,6 +17,12 @@ namespace Crownsfall.Editor
             public int Errors;
         }
 
+        private struct ApplyStatsResult
+        {
+            public int Applied;
+            public int Skipped;
+        }
+
         [MenuItem("Tools/Fighter Tools/Import All Equipment")]
         public static void ImportAllEquipment()
         {
@@ -76,6 +82,93 @@ namespace Crownsfall.Editor
                 $"Mounts Updated : {mounts.Updated}\n" +
                 $"Mounts Errors : {mounts.Errors}\n" +
                 $"Total Errors : {totalErrors}");
+        }
+
+        [MenuItem("Tools/Fighter Tools/Apply Default Equipment Stats")]
+        public static void ApplyDefaultEquipmentStats()
+        {
+            var bodies = ApplyDefaultStatsInFolder<BodySO>(
+                "Bodies",
+                "Assets/ScriptableObjects/Bodies",
+                defaultAttack: 2,
+                defaultDefense: 12,
+                defaultSpeed: 0);
+
+            var heads = ApplyDefaultStatsInFolder<HeadSO>(
+                "Heads",
+                "Assets/ScriptableObjects/Heads",
+                defaultAttack: 1,
+                defaultDefense: 3,
+                defaultSpeed: 1);
+
+            var weapons = ApplyDefaultStatsInFolder<WeaponSO>(
+                "Weapons",
+                "Assets/ScriptableObjects/Weapons",
+                defaultAttack: 10,
+                defaultDefense: 0,
+                defaultSpeed: 2);
+
+            var mounts = ApplyDefaultStatsInFolder<MountSO>(
+                "Mounts",
+                "Assets/ScriptableObjects/Mounts",
+                defaultAttack: 0,
+                defaultDefense: 2,
+                defaultSpeed: 8);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log(
+                $"[Equipment Default Stats]\n" +
+                $"Bodies Applied : {bodies.Applied}\n" +
+                $"Bodies Skipped (already had stats) : {bodies.Skipped}\n" +
+                $"Heads Applied : {heads.Applied}\n" +
+                $"Heads Skipped (already had stats) : {heads.Skipped}\n" +
+                $"Weapons Applied : {weapons.Applied}\n" +
+                $"Weapons Skipped (already had stats) : {weapons.Skipped}\n" +
+                $"Mounts Applied : {mounts.Applied}\n" +
+                $"Mounts Skipped (already had stats) : {mounts.Skipped}");
+        }
+
+        private static ApplyStatsResult ApplyDefaultStatsInFolder<T>(
+            string categoryName,
+            string soFolder,
+            int defaultAttack,
+            int defaultDefense,
+            int defaultSpeed) where T : EquipmentItemSO
+        {
+            var result = new ApplyStatsResult();
+
+            if (!AssetDatabase.IsValidFolder(soFolder))
+            {
+                Debug.LogError($"[Equipment Default Stats] {categoryName}: SO folder not found: {soFolder}");
+                return result;
+            }
+
+            var guids = AssetDatabase.FindAssets($"t:{typeof(T).Name}", new[] { soFolder });
+
+            foreach (var guid in guids)
+            {
+                var assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                var asset = AssetDatabase.LoadAssetAtPath<T>(assetPath);
+                if (asset == null)
+                    continue;
+
+                if (asset.attack == 0 && asset.defense == 0 && asset.speed == 0)
+                {
+                    asset.attack = defaultAttack;
+                    asset.defense = defaultDefense;
+                    asset.speed = defaultSpeed;
+                    EditorUtility.SetDirty(asset);
+                    result.Applied++;
+                }
+                else
+                {
+                    result.Skipped++;
+                }
+            }
+
+            return result;
         }
 
         private static string GetIdPrefix(EquipmentType equipmentType)

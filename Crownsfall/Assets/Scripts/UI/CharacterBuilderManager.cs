@@ -287,10 +287,20 @@ namespace Crownsfall.UI
                 fighterName = "Unnamed Fighter";
             }
 
+            // Pull the currently selected equipment from each list.
             var head = GetItemAt(heads, headIndex);
             var body = GetItemAt(bodies, bodyIndex);
             var weapon = GetItemAt(weapons, weaponIndex);
             var mount = GetItemAt(mounts, mountIndex);
+
+            // Build the fighter and calculate stats from equipment.
+            var fighter = new PlayerFighter();
+            fighter.fighterName = fighterName;
+            fighter.head = head;
+            fighter.body = body;
+            fighter.weapon = weapon;
+            fighter.mount = mount;
+            fighter.CalculateStats();
 
             // Store choices so other scenes can use them later.
             FighterSessionData.FighterName = fighterName;
@@ -301,11 +311,15 @@ namespace Crownsfall.UI
 
             Debug.Log(
                 $"Fighter Created:\n" +
-                $"  Name: {fighterName}\n" +
-                $"  Head: {head?.itemName ?? "None"}\n" +
-                $"  Body: {body?.itemName ?? "None"}\n" +
-                $"  Weapon: {weapon?.itemName ?? "None"}\n" +
-                $"  Mount: {mount?.itemName ?? "None"}");
+                $"  Name: {fighter.fighterName}\n" +
+                $"  Head: {fighter.head?.itemName ?? "None"}\n" +
+                $"  Body: {fighter.body?.itemName ?? "None"}\n" +
+                $"  Weapon: {fighter.weapon?.itemName ?? "None"}\n" +
+                $"  Mount: {fighter.mount?.itemName ?? "None"}\n" +
+                $"  Attack: {fighter.attack}\n" +
+                $"  Defense: {fighter.defense}\n" +
+                $"  Speed: {fighter.speed}\n" +
+                $"  Max Health: {fighter.maxHealth}");
         }
 
         // --- Shared UI helpers ---
