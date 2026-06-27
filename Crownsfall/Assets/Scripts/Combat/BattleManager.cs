@@ -6,31 +6,18 @@ using UnityEngine;
 namespace Crownsfall.Combat
 {
     /// <summary>
-    /// Entry point for the Battle scene. Loads the player's fighter, shows both fighters
-    /// on screen, and logs battle-start info. Does not run combat yet — that comes later.
+    /// Entry point for the Battle scene. Loads the player's fighter from GameSession,
+    /// shows both fighters on UI FighterRigs, and fills the BattleHUD overlay.
+    /// Does not run combat yet — that comes in a later step.
     /// </summary>
     public class BattleManager : MonoBehaviour
     {
-        [Header("Fighter Views")]
-        [SerializeField] private BattleFighterView playerFighterView;
-        [SerializeField] private BattleFighterView enemyFighterView;
+        [Header("Fighter Rigs (UI Canvas)")]
+        [SerializeField] private FighterRig playerFighterRig;
+        [SerializeField] private FighterRig enemyFighterRig;
 
-        [Header("Fighter Layout (mobile portrait)")]
-        [Tooltip("World position for the player fighter. Tweaked so sprites stay inside the screen.")]
-        public Vector3 playerPosition = new Vector3(-0.85f, -1.15f, 0f);
-
-        [Tooltip("World position for the enemy fighter.")]
-        public Vector3 enemyPosition = new Vector3(0.85f, -1.15f, 0f);
-
-        [Tooltip("Uniform scale for both fighters. Smaller values fit better on phone screens.")]
-        public Vector3 fighterScale = new Vector3(0.34f, 0.34f, 0.34f);
-
-        [Header("Camera")]
-        [Tooltip("World position applied to Main Camera at battle start.")]
-        public Vector3 cameraPosition = new Vector3(0f, 0f, -10f);
-
-        [Tooltip("Orthographic size for Main Camera at battle start.")]
-        public float cameraOrthographicSize = 3.5f;
+        [Header("HUD (Canvas overlay)")]
+        [SerializeField] private BattleHUD battleHUD;
 
         [Header("Testing (used when no session data)")]
         [Tooltip("Fighter name used when playing Battle scene directly without Character Builder.")]
@@ -42,24 +29,27 @@ namespace Crownsfall.Combat
         [SerializeField] private MountSO testMount;
 
         [Header("Enemy Placeholder")]
-        [SerializeField] private Color enemyTint = new Color(1f, 0.45f, 0.45f, 1f);
+        [Tooltip("Tint applied to enemy UI layers (e.g. red Training Dummy). Stronger red = easier to spot on mobile.")]
+        [SerializeField] private Color enemyTint = new Color(1f, 0.32f, 0.32f, 1f);
+
+        [Tooltip("When true, enemy shows the same equipment sprites as the player (still tinted). On by default so the dummy is visible.")]
+        [SerializeField] private bool enemyMirrorPlayerAppearance = true;
 
         private PlayerFighter _playerFighter;
         private PlayerFighter _enemyFighter;
 
         /// <summary>
-        /// Runs when the battle scene starts. Builds fighters and displays them.
+        /// Runs when the battle scene starts. Builds fighters, displays rigs, and fills HUD.
         /// </summary>
         private void Start()
         {
-            ConfigureMainCamera();
-            FindFighterViewsIfNeeded();
-            PositionFighters();
+            FindSceneReferencesIfNeeded();
 
             _playerFighter = BuildPlayerFighter();
             _enemyFighter = CreatePlaceholderEnemy();
 
             DisplayFighters();
+            PopulateBattleUI();
             LogBattleStart();
         }
 
@@ -74,62 +64,32 @@ namespace Crownsfall.Combat
         public PlayerFighter EnemyFighter => _enemyFighter;
 
         /// <summary>
-        /// Looks up fighter views by GameObject name when Inspector references are missing.
-        /// Helpful after running Tools → Fighter Tools → Setup Battle Scene.
+        /// Finds fighter rigs and HUD by name when Inspector references are missing.
+        /// Helpful after running Tools → Fighter Tools → Setup Battle Scene Production UI.
         /// </summary>
-        private void FindFighterViewsIfNeeded()
+        private void FindSceneReferencesIfNeeded()
         {
-            if (playerFighterView == null)
+            if (playerFighterRig == null)
             {
-                var playerObject = GameObject.Find("PlayerFighterView");
+                var playerObject = GameObject.Find("PlayerFighterRig");
                 if (playerObject != null)
                 {
-                    playerFighterView = playerObject.GetComponent<BattleFighterView>();
+                    playerFighterRig = playerObject.GetComponent<FighterRig>();
                 }
             }
 
-            if (enemyFighterView == null)
+            if (enemyFighterRig == null)
             {
-                var enemyObject = GameObject.Find("EnemyFighterView");
+                var enemyObject = GameObject.Find("EnemyFighterRig");
                 if (enemyObject != null)
                 {
-                    enemyFighterView = enemyObject.GetComponent<BattleFighterView>();
+                    enemyFighterRig = enemyObject.GetComponent<FighterRig>();
                 }
             }
-        }
 
-        /// <summary>
-        /// Configures Main Camera for 2D battle view (orthographic, size 3.5, centered at origin).
-        /// </summary>
-        private void ConfigureMainCamera()
-        {
-            var mainCamera = Camera.main;
-            if (mainCamera == null)
+            if (battleHUD == null)
             {
-                return;
-            }
-
-            mainCamera.orthographic = true;
-            mainCamera.orthographicSize = cameraOrthographicSize;
-            mainCamera.transform.position = cameraPosition;
-        }
-
-        /// <summary>
-        /// Moves and scales both fighters so they fit a portrait orthographic camera.
-        /// Main Camera orthographic size 3.5 works well with these defaults; the setup tool matches.
-        /// </summary>
-        private void PositionFighters()
-        {
-            if (playerFighterView != null)
-            {
-                playerFighterView.transform.position = playerPosition;
-                playerFighterView.transform.localScale = fighterScale;
-            }
-
-            if (enemyFighterView != null)
-            {
-                enemyFighterView.transform.position = enemyPosition;
-                enemyFighterView.transform.localScale = fighterScale;
+                battleHUD = FindObjectOfType<BattleHUD>();
             }
         }
 
@@ -145,7 +105,6 @@ namespace Crownsfall.Combat
                 return CloneFighter(sessionFighter);
             }
 
-            // Secondary fallback for older static session data (if any).
             if (FighterSessionData.CurrentFighter != null)
             {
                 return CloneFighter(FighterSessionData.CurrentFighter);
@@ -171,17 +130,20 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
-        /// Creates a simple Training Dummy with no equipment for early battle-scene testing.
-        /// CalculateStats with null gear gives attack 0, defense 0, speed 0, maxHealth 100.
+        /// Creates a Training Dummy with fixed stats (no equipment).
+        /// Stats are set manually because CalculateStats only works from gear.
         /// </summary>
         private static PlayerFighter CreatePlaceholderEnemy()
         {
-            var enemy = new PlayerFighter
+            return new PlayerFighter
             {
-                fighterName = "Training Dummy"
+                fighterName = "Training Dummy",
+                attack = 5,
+                defense = 2,
+                speed = 1,
+                maxHealth = 100,
+                currentHealth = 100
             };
-            enemy.CalculateStats();
-            return enemy;
         }
 
         /// <summary>
@@ -219,21 +181,66 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
-        /// Sends each fighter to its BattleFighterView on screen.
+        /// Sends each fighter to its FighterRig and sets facing direction.
         /// </summary>
         private void DisplayFighters()
         {
-            if (playerFighterView != null)
+            if (playerFighterRig != null)
             {
-                playerFighterView.DisplayFighter(_playerFighter);
-                playerFighterView.SetColorTint(Color.white);
+                playerFighterRig.DisplayFighter(_playerFighter);
+                playerFighterRig.SetFacing(true);
+                playerFighterRig.SetColorTint(Color.white);
             }
 
-            if (enemyFighterView != null)
+            if (enemyFighterRig != null)
             {
-                enemyFighterView.DisplayFighter(_enemyFighter);
-                enemyFighterView.SetColorTint(enemyTint);
+                // Dummy has no gear by default; optional mirror uses player sprites for a quick visual test.
+                var enemyDisplay = enemyMirrorPlayerAppearance
+                    ? BuildEnemyDisplayFighter(_playerFighter)
+                    : _enemyFighter;
+
+                enemyFighterRig.DisplayFighter(enemyDisplay);
+                enemyFighterRig.SetFacing(false);
+                enemyFighterRig.SetColorTint(enemyTint);
             }
+        }
+
+        /// <summary>
+        /// Keeps Training Dummy stats but borrows player equipment icons when mirroring is enabled.
+        /// </summary>
+        private static PlayerFighter BuildEnemyDisplayFighter(PlayerFighter player)
+        {
+            var display = new PlayerFighter
+            {
+                fighterName = "Training Dummy",
+                head = player?.head,
+                body = player?.body,
+                weapon = player?.weapon,
+                mount = player?.mount,
+                attack = 5,
+                defense = 2,
+                speed = 1,
+                maxHealth = 100,
+                currentHealth = 100
+            };
+            return display;
+        }
+
+        /// <summary>
+        /// Fills stat blocks, health bars, and the first battle log line.
+        /// </summary>
+        private void PopulateBattleUI()
+        {
+            if (battleHUD == null)
+            {
+                return;
+            }
+
+            battleHUD.InitializeForBattle();
+            battleHUD.SetPlayerStats(_playerFighter);
+            battleHUD.SetEnemyStats(_enemyFighter);
+            battleHUD.SetPlayerHealth(_playerFighter.currentHealth, _playerFighter.maxHealth);
+            battleHUD.SetEnemyHealth(_enemyFighter.currentHealth, _enemyFighter.maxHealth);
         }
 
         /// <summary>

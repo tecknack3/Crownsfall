@@ -4,62 +4,131 @@ using UnityEngine;
 namespace Crownsfall.Combat
 {
     /// <summary>
-    /// Shows a fighter in the battle scene using four stacked SpriteRenderers.
-    /// Layer order (back to front): Mount, Body, Weapon, Head.
-    /// Wire each renderer in the Inspector or use Tools → Fighter Tools → Setup Battle Scene.
+    /// Shows one fighter in the battle scene using four stacked SpriteRenderer layers.
+    /// Each layer is a child GameObject (MountLayer, BodyLayer, WeaponLayer, HeadLayer).
+    /// BattleManager places this view in world space; UI lives separately on a Canvas.
     /// </summary>
     public class BattleFighterView : MonoBehaviour
     {
-        // Sorting orders keep layers in the correct draw order (lower = drawn first / behind).
-        // Mount is farthest back; Head draws on top of Body; Weapon sits in front of Body.
+        // Draw order: lower sorting order = drawn first (behind). Mount back, Head front.
         private const int MountSortingOrder = 0;
         private const int BodySortingOrder = 1;
         private const int WeaponSortingOrder = 2;
         private const int HeadSortingOrder = 3;
 
-        [Header("Sprite Layers (back to front)")]
-        [SerializeField] private SpriteRenderer mountRenderer;
-        [SerializeField] private SpriteRenderer bodyRenderer;
-        [SerializeField] private SpriteRenderer weaponRenderer;
-        [SerializeField] private SpriteRenderer headRenderer;
+        [Header("Sprite Layers (child GameObjects)")]
+        [Tooltip("Back layer — mount sprite sits behind the body.")]
+        [SerializeField] private Transform mountLayer;
+
+        [Tooltip("Main body layer.")]
+        [SerializeField] private Transform bodyLayer;
+
+        [Tooltip("Weapon held in front of the body.")]
+        [SerializeField] private Transform weaponLayer;
+
+        [Tooltip("Head draws on top of everything else.")]
+        [SerializeField] private Transform headLayer;
+
+        [Header("Layer Offsets (local space)")]
+        [Tooltip("How far the mount sits below the body center.")]
+        public Vector3 mountOffset = new Vector3(0f, -0.8f, 0f);
+
+        [Tooltip("Body stays at the fighter root center.")]
+        public Vector3 bodyOffset = new Vector3(0f, 0f, 0f);
+
+        [Tooltip("Head sits above the body.")]
+        public Vector3 headOffset = new Vector3(0f, 0.75f, 0f);
+
+        [Tooltip("Weapon offset to the side of the body.")]
+        public Vector3 weaponOffset = new Vector3(0.45f, 0.1f, 0f);
+
+        [Header("Scale")]
+        [Tooltip("Extra multiplier on top of BattleManager fighterScale. Leave at 1 unless you need a tweak.")]
+        public float overallScale = 1f;
+
+        // Cached SpriteRenderers — filled in Awake from the layer transforms.
+        private SpriteRenderer _mountRenderer;
+        private SpriteRenderer _bodyRenderer;
+        private SpriteRenderer _weaponRenderer;
+        private SpriteRenderer _headRenderer;
+
+        // True = facing right (player). False = facing left (enemy).
+        private bool _faceRight = true;
 
         /// <summary>
-        /// Runs once when this view is created. Sets draw order and centers child sprites.
+        /// Runs once when the view loads. Finds renderers, sets draw order, and applies offsets.
         /// </summary>
         private void Awake()
         {
+            CacheRenderers();
             ApplySortingOrders();
-            CenterSpriteLayersAtOrigin();
+            ApplyLayerOffsets();
         }
 
         /// <summary>
-        /// Updates all four sprite layers from the given fighter's equipment icons.
-        /// Missing equipment hides that layer instead of showing a broken sprite.
+        /// Puts equipment icon sprites on each layer. Missing gear hides that layer cleanly.
         /// </summary>
         public void DisplayFighter(PlayerFighter fighter)
         {
+            ApplyLayerOffsets();
+
             if (fighter == null)
             {
                 ClearAllLayers();
                 return;
             }
 
-            SetLayer(mountRenderer, fighter.mount?.icon, MountSortingOrder);
-            SetLayer(bodyRenderer, fighter.body?.icon, BodySortingOrder);
-            SetLayer(weaponRenderer, fighter.weapon?.icon, WeaponSortingOrder);
-            SetLayer(headRenderer, fighter.head?.icon, HeadSortingOrder);
+            SetLayer(_mountRenderer, fighter.mount?.icon, MountSortingOrder);
+            SetLayer(_bodyRenderer, fighter.body?.icon, BodySortingOrder);
+            SetLayer(_weaponRenderer, fighter.weapon?.icon, WeaponSortingOrder);
+            SetLayer(_headRenderer, fighter.head?.icon, HeadSortingOrder);
         }
 
         /// <summary>
-        /// Tints every visible layer (e.g. red for the enemy placeholder).
-        /// Pass Color.white to reset to the sprite's original colors.
+        /// Flips the fighter left or right by negating localScale.x.
+        /// Player typically faces right; enemy faces left.
+        /// </summary>
+        public void SetFacing(bool faceRight)
+        {
+            _faceRight = faceRight;
+
+            var scale = transform.localScale;
+            var magnitudeX = Mathf.Abs(scale.x);
+            scale.x = magnitudeX * (faceRight ? 1f : -1f);
+            transform.localScale = scale;
+        }
+
+        /// <summary>
+        /// Tints every visible layer (e.g. reddish for the enemy dummy).
+        /// Pass Color.white to restore original sprite colors.
         /// </summary>
         public void SetColorTint(Color tint)
         {
-            ApplyTint(mountRenderer, tint);
-            ApplyTint(bodyRenderer, tint);
-            ApplyTint(weaponRenderer, tint);
-            ApplyTint(headRenderer, tint);
+            ApplyTint(_mountRenderer, tint);
+            ApplyTint(_bodyRenderer, tint);
+            ApplyTint(_weaponRenderer, tint);
+            ApplyTint(_headRenderer, tint);
+        }
+
+        /// <summary>
+        /// Multiplies the scale BattleManager assigns by overallScale, keeping facing direction.
+        /// </summary>
+        public void ApplyBaseScale(Vector3 baseScale)
+        {
+            var scaled = baseScale * overallScale;
+            scaled.x = Mathf.Abs(scaled.x) * (_faceRight ? 1f : -1f);
+            transform.localScale = scaled;
+        }
+
+        /// <summary>
+        /// Moves each layer child to its configured offset so parts stack correctly.
+        /// </summary>
+        public void ApplyLayerOffsets()
+        {
+            SetLayerLocalPosition(mountLayer, mountOffset);
+            SetLayerLocalPosition(bodyLayer, bodyOffset);
+            SetLayerLocalPosition(weaponLayer, weaponOffset);
+            SetLayerLocalPosition(headLayer, headOffset);
         }
 
         /// <summary>
@@ -67,10 +136,21 @@ namespace Crownsfall.Combat
         /// </summary>
         public void ClearAllLayers()
         {
-            SetLayer(mountRenderer, null, MountSortingOrder);
-            SetLayer(bodyRenderer, null, BodySortingOrder);
-            SetLayer(weaponRenderer, null, WeaponSortingOrder);
-            SetLayer(headRenderer, null, HeadSortingOrder);
+            SetLayer(_mountRenderer, null, MountSortingOrder);
+            SetLayer(_bodyRenderer, null, BodySortingOrder);
+            SetLayer(_weaponRenderer, null, WeaponSortingOrder);
+            SetLayer(_headRenderer, null, HeadSortingOrder);
+        }
+
+        /// <summary>
+        /// Grabs SpriteRenderer from each layer GameObject (created by the setup tool).
+        /// </summary>
+        private void CacheRenderers()
+        {
+            _mountRenderer = GetRendererOnLayer(mountLayer);
+            _bodyRenderer = GetRendererOnLayer(bodyLayer);
+            _weaponRenderer = GetRendererOnLayer(weaponLayer);
+            _headRenderer = GetRendererOnLayer(headLayer);
         }
 
         /// <summary>
@@ -78,49 +158,40 @@ namespace Crownsfall.Combat
         /// </summary>
         private void ApplySortingOrders()
         {
-            if (mountRenderer != null)
+            if (_mountRenderer != null)
             {
-                mountRenderer.sortingOrder = MountSortingOrder;
+                _mountRenderer.sortingOrder = MountSortingOrder;
             }
 
-            if (bodyRenderer != null)
+            if (_bodyRenderer != null)
             {
-                bodyRenderer.sortingOrder = BodySortingOrder;
+                _bodyRenderer.sortingOrder = BodySortingOrder;
             }
 
-            if (weaponRenderer != null)
+            if (_weaponRenderer != null)
             {
-                weaponRenderer.sortingOrder = WeaponSortingOrder;
+                _weaponRenderer.sortingOrder = WeaponSortingOrder;
             }
 
-            if (headRenderer != null)
+            if (_headRenderer != null)
             {
-                headRenderer.sortingOrder = HeadSortingOrder;
+                _headRenderer.sortingOrder = HeadSortingOrder;
             }
         }
 
-        /// <summary>
-        /// Keeps each sprite child at local (0, 0, 0) so BattleManager scaling shrinks/grows from the center.
-        /// </summary>
-        private void CenterSpriteLayersAtOrigin()
+        private static SpriteRenderer GetRendererOnLayer(Transform layer)
         {
-            CenterLayerTransform(mountRenderer);
-            CenterLayerTransform(bodyRenderer);
-            CenterLayerTransform(weaponRenderer);
-            CenterLayerTransform(headRenderer);
+            return layer != null ? layer.GetComponent<SpriteRenderer>() : null;
         }
 
-        /// <summary>
-        /// Moves one layer's transform to the parent's origin without changing world position at edit time.
-        /// </summary>
-        private static void CenterLayerTransform(SpriteRenderer renderer)
+        private static void SetLayerLocalPosition(Transform layer, Vector3 offset)
         {
-            if (renderer == null)
+            if (layer == null)
             {
                 return;
             }
 
-            renderer.transform.localPosition = Vector3.zero;
+            layer.localPosition = offset;
         }
 
         /// <summary>
@@ -138,9 +209,6 @@ namespace Crownsfall.Combat
             renderer.sortingOrder = sortingOrder;
         }
 
-        /// <summary>
-        /// Applies a color tint to a single renderer when it exists.
-        /// </summary>
         private static void ApplyTint(SpriteRenderer renderer, Color tint)
         {
             if (renderer == null)
