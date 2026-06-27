@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
+  m_IndirectSpecularColor: {r: 0.127317, g: 0.13414717, b: 0.12107849, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -331,8 +331,94 @@ MonoBehaviour:
   testBody: {fileID: 0}
   testWeapon: {fileID: 0}
   testMount: {fileID: 0}
+  enemyHeads:
+  - {fileID: 11400000, guid: d6bf4026e152d4ad2bb87a397ae9189b, type: 2}
+  - {fileID: 11400000, guid: d777bc09c71b040eea567e820768d994, type: 2}
+  - {fileID: 11400000, guid: 493acda8b941c4718b2925e84bb3d50b, type: 2}
+  - {fileID: 11400000, guid: 052a1437591754cdeb97df8e4b61643a, type: 2}
+  - {fileID: 11400000, guid: c96ce3597a2ed40389ef016331cedc6d, type: 2}
+  - {fileID: 11400000, guid: 05efbbe49f8e3401c811c3413c7223da, type: 2}
+  - {fileID: 11400000, guid: 8003d8e65266c469a84ed260a3cc9983, type: 2}
+  - {fileID: 11400000, guid: 1beb70a130bf342cc88d90d5ead05623, type: 2}
+  - {fileID: 11400000, guid: bd089b403b23340be9ac46152cb4346f, type: 2}
+  - {fileID: 11400000, guid: 277253a7002174dd5b363e60220e213a, type: 2}
+  - {fileID: 11400000, guid: b59806d02fb6c4b4e97c19e85ddf4d1b, type: 2}
+  - {fileID: 11400000, guid: df9b16ca39e434f069b475c05cc498d4, type: 2}
+  - {fileID: 11400000, guid: 3a79962af4a284bc2a7df2f702fd75af, type: 2}
+  - {fileID: 11400000, guid: 86f5b2e79354541369bddf330938aad4, type: 2}
+  - {fileID: 11400000, guid: 1d894ffef978b441bb3d5b8f85970b7f, type: 2}
+  - {fileID: 11400000, guid: 1b39e9794e112442a952d930a04b521f, type: 2}
+  - {fileID: 11400000, guid: c6c36b2a839184cabafd77853844c6bd, type: 2}
+  - {fileID: 11400000, guid: 52f64a2575dc84288b8c576a60039c26, type: 2}
+  - {fileID: 11400000, guid: ade8e4b1a6047409994c6dddc0da6c41, type: 2}
+  - {fileID: 11400000, guid: 2f33b661b27844c12811c492a0733126, type: 2}
+  enemyBodies:
+  - {fileID: 11400000, guid: 702c27d69a3b342cab19df6765676492, type: 2}
+  - {fileID: 11400000, guid: d1970e15adb9a46efbe6ad4c7cc9fe92, type: 2}
+  - {fileID: 11400000, guid: 8e3e83d3d0e4948f79d0ce0723c6bc16, type: 2}
+  - {fileID: 11400000, guid: c58c60229730d469c8ced2d66586fb36, type: 2}
+  - {fileID: 11400000, guid: ee93da2f15e9347b1bd3d6604c9487f3, type: 2}
+  - {fileID: 11400000, guid: 6ab01eddb8c3d4864bee2688478ba494, type: 2}
+  - {fileID: 11400000, guid: 8d30658d64a2b4b3aadda9f168d39568, type: 2}
+  - {fileID: 11400000, guid: 90ef9c369a46947f29470df1ec93c74d, type: 2}
+  - {fileID: 11400000, guid: a016efbb910b743818ad7c0dbce77d24, type: 2}
+  - {fileID: 11400000, guid: 1d5688a81339a4276828b0205d5a94b3, type: 2}
+  - {fileID: 11400000, guid: 003748b9aa22f48e6acc1a49a8bf9c18, type: 2}
+  - {fileID: 11400000, guid: 0a860e15a0cb94752a384e8e6b6f3530, type: 2}
+  - {fileID: 11400000, guid: dde64358db44f4c1398e1b08342ac11a, type: 2}
+  - {fileID: 11400000, guid: d44f693bf35744e34857fefe89ed896a, type: 2}
+  - {fileID: 11400000, guid: cd2de7817d1984e9c98433f3e9f97250, type: 2}
+  - {fileID: 11400000, guid: 72bdd9a855b674bff9444004340a453c, type: 2}
+  - {fileID: 11400000, guid: 1ea652b02b5a44f5ea8f5ae8559c723b, type: 2}
+  - {fileID: 11400000, guid: 0f42066b8359e4a3e802189d296d2c47, type: 2}
+  - {fileID: 11400000, guid: ac11250ff71f04b4282c1d6822906a9d, type: 2}
+  - {fileID: 11400000, guid: d54e5e58eb40440fd9586f340c6bcda8, type: 2}
+  enemyWeapons:
+  - {fileID: 11400000, guid: e73154387d94e4bdfadea0d285260eda, type: 2}
+  - {fileID: 11400000, guid: 57685845c8fd1450abfa55f1790774d7, type: 2}
+  - {fileID: 11400000, guid: f532a3d6bcc224c38953dd197b0ad398, type: 2}
+  - {fileID: 11400000, guid: 9a0dadafed6c94c2182131933d6bf26d, type: 2}
+  - {fileID: 11400000, guid: e5055dc4b27cb40bd8ebb3e2ea7b6148, type: 2}
+  - {fileID: 11400000, guid: 8d7f099e281be48fc9d0963840655c6c, type: 2}
+  - {fileID: 11400000, guid: 981ca0e2c0ffa41f69140b19b8d3b6b1, type: 2}
+  - {fileID: 11400000, guid: 986b5983c2dfd4d44ae4fede9b9da428, type: 2}
+  - {fileID: 11400000, guid: fb61222c972a5452cbc3322db765a7c0, type: 2}
+  - {fileID: 11400000, guid: 60830e5fa12d9418fa0e638481fc230f, type: 2}
+  - {fileID: 11400000, guid: 1434870cae08f4585925d8236fc41524, type: 2}
+  - {fileID: 11400000, guid: b01adb64ab2d94f6cb4d0b06210acc89, type: 2}
+  - {fileID: 11400000, guid: 856967c7cce8f41dca350b1a6f024f39, type: 2}
+  - {fileID: 11400000, guid: 0b5904e8d50964f3b9685c933cf3ee9e, type: 2}
+  - {fileID: 11400000, guid: a47e45d3bbe804479b66122f0c6f1041, type: 2}
+  - {fileID: 11400000, guid: a8bdf6a1e271b4163a5ea622cf28e169, type: 2}
+  - {fileID: 11400000, guid: abb1fd4a5dbda482b972461e8525ec42, type: 2}
+  - {fileID: 11400000, guid: 408741fb6e6bb4455b6f005e0b8ac69f, type: 2}
+  - {fileID: 11400000, guid: 1292fb2d5f1844bcc8a3d9e8dca17d84, type: 2}
+  - {fileID: 11400000, guid: c8935b316569a4bd081a42aa970541aa, type: 2}
+  enemyMounts:
+  - {fileID: 11400000, guid: 6d18a949828764cdc88b615e3c16335a, type: 2}
+  - {fileID: 11400000, guid: 33e7dd0bdd616413f98955d171c7746e, type: 2}
+  - {fileID: 11400000, guid: 50b35e361be964ac0b8e547cdc1251ee, type: 2}
+  - {fileID: 11400000, guid: c774b40d3667d401f8a7bb249f2d2d48, type: 2}
+  - {fileID: 11400000, guid: 594021686120142fca0ccf0cfb73ab06, type: 2}
+  - {fileID: 11400000, guid: 3def4cfaf8f15418fbc4cb71bbcda364, type: 2}
+  - {fileID: 11400000, guid: 7a42656dc995f475a8316d15681c467a, type: 2}
+  - {fileID: 11400000, guid: e4fd3559b0c724f9cb5417f17e46ddb8, type: 2}
+  - {fileID: 11400000, guid: 1116be6f1c0644b02ac9bdd99c6d02e1, type: 2}
+  - {fileID: 11400000, guid: 5e531fd3c283f4012aaa5c773cee664f, type: 2}
+  - {fileID: 11400000, guid: 0638c37f5f8044c319c8cfbd5ca81e03, type: 2}
+  - {fileID: 11400000, guid: 7b3706ff860cc432b9042667d52afd14, type: 2}
+  - {fileID: 11400000, guid: 2fcec21b4fe90415a963d004c34c6067, type: 2}
+  - {fileID: 11400000, guid: 1002193c5dad94f2a903454030fb0f51, type: 2}
+  - {fileID: 11400000, guid: ab504698e92c3496893362626be4f06d, type: 2}
+  - {fileID: 11400000, guid: e412a75a96c1d466fb83cff7b8f86c8f, type: 2}
+  - {fileID: 11400000, guid: c6ff94a68d2fd4ba183ca7bb0f6f8fc5, type: 2}
+  - {fileID: 11400000, guid: f340bc2d6aee442c29ddf203e5e84dec, type: 2}
+  - {fileID: 11400000, guid: 349af3c9dd68e472ab30439a78fb95f7, type: 2}
+  - {fileID: 11400000, guid: 9b85ea98c4f8948a8b706783c0378de7, type: 2}
   enemyTint: {r: 1, g: 0.32, b: 0.32, a: 1}
-  enemyMirrorPlayerAppearance: 1
+  battleStartDelay: 1
+  attackInterval: 0.8
+  waveTransitionDelay: 1.2
 --- !u!4 &80257748
 Transform:
   m_ObjectHideFlags: 0
@@ -798,7 +884,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -993,7 +1079,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4294108896
   m_fontColor: {r: 0.88, g: 0.9, b: 0.95, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -1006,7 +1092,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -1568,7 +1654,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 1508628953
   m_fontColor: {r: 0.85, g: 0.85, b: 0.92, a: 0.35}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -1581,7 +1667,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -1719,7 +1805,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -2076,7 +2162,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -2168,7 +2254,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4290306283
   m_fontColor: {r: 0.92, g: 0.88, b: 0.72, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -2181,7 +2267,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -2704,7 +2790,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -3206,7 +3292,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -3567,7 +3653,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -3949,7 +4035,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4294108896
   m_fontColor: {r: 0.88, g: 0.9, b: 0.95, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -3962,7 +4048,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2

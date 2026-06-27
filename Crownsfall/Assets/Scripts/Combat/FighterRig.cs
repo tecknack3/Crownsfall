@@ -86,6 +86,15 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
+        /// Puts equipment icon sprites on each layer for a wave enemy.
+        /// Convenience wrapper — combat logic should still use EnemyFighter directly.
+        /// </summary>
+        public void DisplayEnemy(EnemyFighter enemy)
+        {
+            Display(enemy?.ToDisplayFighter());
+        }
+
+        /// <summary>
         /// Puts equipment icon sprites on each layer. Missing gear hides that layer cleanly.
         /// Pass null to clear the rig.
         /// </summary>

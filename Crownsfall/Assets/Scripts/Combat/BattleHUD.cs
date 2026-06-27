@@ -83,6 +83,14 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
+        /// Fills the bottom-right enemy stat block from an EnemyFighter (wave enemies from EnemyFactory).
+        /// </summary>
+        public void SetEnemyStats(EnemyFighter enemy)
+        {
+            SetText(enemyStatsText, BuildEnemyStatsBlock(enemy));
+        }
+
+        /// <summary>
         /// Sets the player health bar fill (0 = empty, 1 = full).
         /// </summary>
         public void SetPlayerHealth(float current, float max)
@@ -155,10 +163,48 @@ namespace Crownsfall.Combat
                 return "—";
             }
 
-            // Three-line mobile layout: name, ATK/DEF row, SPD/HP row (extra spacing for readability).
-            return $"{fighter.fighterName}\n" +
-                   $"ATK {fighter.attack}   DEF {fighter.defense}\n" +
-                   $"SPD {fighter.speed}   HP {fighter.currentHealth}/{fighter.maxHealth}";
+            return BuildStatsBlock(
+                fighter.fighterName,
+                fighter.attack,
+                fighter.defense,
+                fighter.speed,
+                fighter.currentHealth,
+                fighter.maxHealth);
+        }
+
+        /// <summary>
+        /// Builds a multi-line stat string for one wave enemy.
+        /// </summary>
+        private static string BuildEnemyStatsBlock(EnemyFighter enemy)
+        {
+            if (enemy == null)
+            {
+                return "—";
+            }
+
+            return BuildStatsBlock(
+                enemy.enemyName,
+                enemy.attack,
+                enemy.defense,
+                enemy.speed,
+                enemy.currentHealth,
+                enemy.maxHealth);
+        }
+
+        /// <summary>
+        /// Shared three-line mobile layout: name, ATK/DEF row, SPD/HP row.
+        /// </summary>
+        private static string BuildStatsBlock(
+            string name,
+            int attack,
+            int defense,
+            int speed,
+            int currentHealth,
+            int maxHealth)
+        {
+            return $"{name}\n" +
+                   $"ATK {attack}   DEF {defense}\n" +
+                   $"SPD {speed}   HP {currentHealth}/{maxHealth}";
         }
 
         /// <summary>
