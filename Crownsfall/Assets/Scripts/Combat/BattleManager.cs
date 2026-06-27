@@ -1,3 +1,4 @@
+using System.Collections;
 using Crownsfall.Characters;
 using Crownsfall.Core;
 using Crownsfall.UI;
@@ -7,8 +8,8 @@ namespace Crownsfall.Combat
 {
     /// <summary>
     /// Entry point for the Battle scene. Loads the player's fighter from GameSession,
-    /// shows both fighters on UI FighterRigs, and fills the BattleHUD overlay.
-    /// Does not run combat yet — that comes in a later step.
+    /// shows both fighters on UI FighterRigs, fills the BattleHUD overlay, and runs
+    /// a simple auto-combat loop until one fighter is defeated.
     /// </summary>
     public class BattleManager : MonoBehaviour
     {
@@ -35,11 +36,24 @@ namespace Crownsfall.Combat
         [Tooltip("When true, enemy shows the same equipment sprites as the player (still tinted). On by default so the dummy is visible.")]
         [SerializeField] private bool enemyMirrorPlayerAppearance = true;
 
+        [Header("Combat Timing")]
+        [Tooltip("Seconds to wait after scene load before the first attack.")]
+        [SerializeField] private float battleStartDelay = 1f;
+
+        [Tooltip("Seconds between each attack in the auto-combat loop.")]
+        [SerializeField] private float attackInterval = 0.8f;
+
         private PlayerFighter _playerFighter;
         private PlayerFighter _enemyFighter;
 
         /// <summary>
-        /// Runs when the battle scene starts. Builds fighters, displays rigs, and fills HUD.
+        /// When false, the combat coroutine stops taking new turns.
+        /// </summary>
+        private bool _combatRunning;
+
+        /// <summary>
+        /// Runs when the battle scene starts. Builds fighters, displays rigs, fills HUD,
+        /// then schedules auto-combat after a short delay.
         /// </summary>
         private void Start()
         {
@@ -51,6 +65,8 @@ namespace Crownsfall.Combat
             DisplayFighters();
             PopulateBattleUI();
             LogBattleStart();
+
+            StartCoroutine(BeginCombatAfterDelay());
         }
 
         /// <summary>
@@ -62,6 +78,157 @@ namespace Crownsfall.Combat
         /// Returns the placeholder enemy fighter (read-only for other scripts later).
         /// </summary>
         public PlayerFighter EnemyFighter => _enemyFighter;
+
+        /// <summary>
+        /// Waits one second, logs that combat is starting, refreshes HUD bars/score, then runs the loop.
+        /// </summary>
+        private IEnumerator BeginCombatAfterDelay()
+        {
+            yield return new WaitForSeconds(battleStartDelay);
+
+            LogCombatMessage("Combat starts!");
+
+            // Refresh health bars and score right before the first swing.
+            RefreshCombatHud();
+
+            StartCoroutine(StartBattleLoop());
+        }
+
+        /// <summary>
+        /// Auto-combat: player attacks, pause, enemy attacks (if alive), pause, repeat.
+        /// Stops when either fighter's health reaches 0.
+        /// </summary>
+        private IEnumerator StartBattleLoop()
+        {
+            _combatRunning = true;
+
+            while (_combatRunning && _playerFighter.isAlive && _enemyFighter.isAlive)
+            {
+                // --- Player turn ---
+                var playerDamage = CalculateDamage(_playerFighter, _enemyFighter);
+                _enemyFighter.TakeDamage(playerDamage);
+
+                UpdateEnemyHealthDisplay();
+                LogCombatMessage($"Player dealt {playerDamage} damage!");
+
+                if (!_enemyFighter.isAlive)
+                {
+                    HandleEnemyDefeated();
+                    yield break;
+                }
+
+                yield return new WaitForSeconds(attackInterval);
+
+                if (!_combatRunning || !_enemyFighter.isAlive)
+                {
+                    yield break;
+                }
+
+                // --- Enemy turn (only if still alive) ---
+                var enemyDamage = CalculateDamage(_enemyFighter, _playerFighter);
+                _playerFighter.TakeDamage(enemyDamage);
+
+                UpdatePlayerHealthDisplay();
+                LogCombatMessage($"Enemy dealt {enemyDamage} damage!");
+
+                if (!_playerFighter.isAlive)
+                {
+                    HandlePlayerDefeated();
+                    yield break;
+                }
+
+                yield return new WaitForSeconds(attackInterval);
+            }
+        }
+
+        /// <summary>
+        /// Basic damage formula: attack minus defense, with a minimum of 1.
+        /// </summary>
+        private static int CalculateDamage(PlayerFighter attacker, PlayerFighter defender)
+        {
+            return Mathf.Max(1, attacker.attack - defender.defense);
+        }
+
+        /// <summary>
+        /// Called when the Training Dummy reaches 0 HP. Awards score and ends combat.
+        /// </summary>
+        private void HandleEnemyDefeated()
+        {
+            _combatRunning = false;
+            LogCombatMessage("Enemy defeated!");
+
+            _playerFighter.AddScore(1);
+
+            if (battleHUD != null)
+            {
+                battleHUD.SetScore(_playerFighter.currentScore);
+            }
+        }
+
+        /// <summary>
+        /// Called when the player reaches 0 HP. Ends combat with no score change.
+        /// </summary>
+        private void HandlePlayerDefeated()
+        {
+            _combatRunning = false;
+            LogCombatMessage("Fighter defeated!");
+        }
+
+        /// <summary>
+        /// Syncs player health bar and stat block with current fighter values.
+        /// </summary>
+        private void UpdatePlayerHealthDisplay()
+        {
+            if (battleHUD == null)
+            {
+                return;
+            }
+
+            battleHUD.SetPlayerHealth(_playerFighter.currentHealth, _playerFighter.maxHealth);
+            battleHUD.SetPlayerStats(_playerFighter);
+        }
+
+        /// <summary>
+        /// Syncs enemy health bar and stat block with current fighter values.
+        /// </summary>
+        private void UpdateEnemyHealthDisplay()
+        {
+            if (battleHUD == null)
+            {
+                return;
+            }
+
+            battleHUD.SetEnemyHealth(_enemyFighter.currentHealth, _enemyFighter.maxHealth);
+            battleHUD.SetEnemyStats(_enemyFighter);
+        }
+
+        /// <summary>
+        /// Refreshes health bars and score at combat start (after the initial delay).
+        /// </summary>
+        private void RefreshCombatHud()
+        {
+            if (battleHUD == null)
+            {
+                return;
+            }
+
+            battleHUD.SetPlayerHealth(_playerFighter.currentHealth, _playerFighter.maxHealth);
+            battleHUD.SetEnemyHealth(_enemyFighter.currentHealth, _enemyFighter.maxHealth);
+            battleHUD.SetScore(_playerFighter.currentScore);
+        }
+
+        /// <summary>
+        /// Writes a line to the battle log HUD and mirrors it to the Unity Console.
+        /// </summary>
+        private void LogCombatMessage(string message)
+        {
+            Debug.Log(message);
+
+            if (battleHUD != null)
+            {
+                battleHUD.AddLogLine(message);
+            }
+        }
 
         /// <summary>
         /// Finds fighter rigs and HUD by name when Inspector references are missing.
