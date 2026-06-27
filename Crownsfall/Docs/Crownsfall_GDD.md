@@ -17,19 +17,20 @@
 5. [Fighter Rig System](#5-fighter-rig-system)
 6. [PlayerFighter Data Model](#6-playerfighter-data-model)
 7. [Battle System](#7-battle-system)
-8. [Enemy Progression](#8-enemy-progression)
-9. [Scoring System](#9-scoring-system)
-10. [Crown Holder System](#10-crown-holder-system)
-11. [Hall of Kings](#11-hall-of-kings)
-12. [Firebase Plan](#12-firebase-plan)
-13. [AdMob Plan](#13-admob-plan)
-14. [Firebase Remote Config Plan](#14-firebase-remote-config-plan)
-15. [Analytics Events](#15-analytics-events)
-16. [UI/UX Direction](#16-uiux-direction)
-17. [Art Direction](#17-art-direction)
-18. [Technical Architecture](#18-technical-architecture)
-19. [Development Phases](#19-development-phases)
-20. [Release Checklist](#20-release-checklist)
+8. [Future Feature: Optional Manual Battle Mode](#8-future-feature-optional-manual-battle-mode)
+9. [Enemy Progression](#9-enemy-progression)
+10. [Scoring System](#10-scoring-system)
+11. [Crown Holder System](#11-crown-holder-system)
+12. [Hall of Kings](#12-hall-of-kings)
+13. [Firebase Plan](#13-firebase-plan)
+14. [AdMob Plan](#14-admob-plan)
+15. [Firebase Remote Config Plan](#15-firebase-remote-config-plan)
+16. [Analytics Events](#16-analytics-events)
+17. [UI/UX Direction](#17-uiux-direction)
+18. [Art Direction](#18-art-direction)
+19. [Technical Architecture](#19-technical-architecture)
+20. [Development Phases](#20-development-phases)
+21. [Release Checklist](#21-release-checklist)
 - [Appendix A: Cursor Prompt Templates](#appendix-a-cursor-prompt-templates)
 
 ---
@@ -434,7 +435,64 @@ Replace with `EnemyWaveManager` procedural enemies after combat MVP.
 
 ---
 
-## 8. Enemy Progression
+## 8. Future Feature: Optional Manual Battle Mode
+
+### Launch Scope (Version 1)
+
+Crownsfall launches first as an **auto-battler**. The core loop is fighter creation, equipment strategy, endless enemy waves, scoring, and Crown competition—combat resolves without manual input during a fight.
+
+A future version may add an **optional Manual Battle Mode**. Manual mode is separate from the default auto-battle experience; auto-battle remains the primary mode at launch and is never replaced by manual controls.
+
+### Version 1 Focus
+
+| Area | Scope |
+|------|-------|
+| Auto-battle | Default and only combat mode at launch |
+| Scoring | Run score, personal best, kill bonuses |
+| Enemy waves | Procedural escalation |
+| Local high score | PlayerPrefs persistence |
+| Firebase leaderboard | Global ranking |
+| Crown Holder | Reigning #1 player |
+| Hall of Kings | Longest Crown Reign history |
+| Monetization | AdMob interstitials / rewarded (planned) |
+
+Version 1 should **not** implement joystick controls, manual dodge, or Action Mode selection UI.
+
+### Possible Manual Mode Features (Future)
+
+| Feature | Description |
+|---------|-------------|
+| Joystick movement | On-screen stick for fighter positioning |
+| Tap / hold attack | Basic melee or ranged attack input |
+| Dodge button | Timed evade with cooldown |
+| Special ability | Equipment- or build-driven skill button |
+| Flying mount movement | Vertical or free-movement when mount supports flight |
+| Manual boss fights | Hand-authored encounters with manual control only |
+| Action Mode selection | Optional pre-battle choice: **Auto** vs **Manual** |
+
+### Architecture Note
+
+Design the battle system to be future-ready by **separating combat control logic** from combat resolution (damage math, waves, scoring, HUD updates). Shared systems stay mode-agnostic; only the controller layer changes.
+
+Recommended structure:
+
+```
+BattleController (orchestrator interface)
+    ├── AutoBattleController      [Version 1]
+    └── ManualBattleController    [Future]
+```
+
+`BattleManager` (or equivalent orchestrator) delegates to the active controller. Shared components—`DamageResolver`, `EnemyWaveManager`, `BattleHUD`, `FighterRig`—remain unchanged regardless of control mode.
+
+### Non-Goals (Version 1)
+
+- Joystick / touch combat controls
+- Manual dodge, special abilities, or Action Mode selection UI
+- Flying mount physics or manual-only boss encounters
+
+---
+
+## 9. Enemy Progression
 
 ### Design Goal
 
@@ -482,7 +540,7 @@ Higher waves should yield more score per kill (see Scoring System) so deep runs 
 
 ---
 
-## 9. Scoring System
+## 10. Scoring System
 
 ### Principles
 
@@ -526,7 +584,7 @@ On player death:
 
 ---
 
-## 10. Crown Holder System
+## 11. Crown Holder System
 
 ### Concept
 
@@ -569,7 +627,7 @@ When crown transfers:
 
 ---
 
-## 11. Hall of Kings
+## 12. Hall of Kings
 
 ### Concept
 
@@ -606,7 +664,7 @@ A gallery honoring fighters who achieved the **longest Crown Reign**—not just 
 
 ---
 
-## 12. Firebase Plan
+## 13. Firebase Plan
 
 ### Services
 
@@ -667,7 +725,7 @@ Suggested classes:
 
 ---
 
-## 13. AdMob Plan
+## 14. AdMob Plan
 
 ### Monetization Model (Recommended for MVP)
 
@@ -701,7 +759,7 @@ Suggested classes:
 
 ---
 
-## 14. Firebase Remote Config Plan
+## 15. Firebase Remote Config Plan
 
 ### Purpose
 
@@ -736,7 +794,7 @@ Tune combat balance, enemy scaling, and scoring without shipping a new binary.
 
 ---
 
-## 15. Analytics Events
+## 16. Analytics Events
 
 ### Firebase Analytics Event Catalog
 
@@ -767,7 +825,7 @@ Tune combat balance, enemy scaling, and scoring without shipping a new binary.
 
 ---
 
-## 16. UI/UX Direction
+## 17. UI/UX Direction
 
 ### Platform Constraints
 
@@ -819,7 +877,7 @@ Tune combat balance, enemy scaling, and scoring without shipping a new binary.
 
 ---
 
-## 17. Art Direction
+## 18. Art Direction
 
 ### Style
 
@@ -871,7 +929,7 @@ Assets/ScriptableObjects/
 
 ---
 
-## 18. Technical Architecture
+## 19. Technical Architecture
 
 ### Namespaces
 
@@ -934,7 +992,7 @@ Data (ScriptableObjects, Firebase)
 
 ---
 
-## 19. Development Phases
+## 20. Development Phases
 
 ### Phase 0 — Prototype Foundation ✅ (Current)
 
@@ -985,7 +1043,7 @@ Data (ScriptableObjects, Firebase)
 
 ---
 
-## 20. Release Checklist
+## 21. Release Checklist
 
 ### Pre-Release Technical
 
