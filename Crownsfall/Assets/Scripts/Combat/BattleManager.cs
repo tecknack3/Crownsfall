@@ -141,6 +141,12 @@ namespace Crownsfall.Combat
 
 
 
+        [Tooltip("Seconds to wait after enemy entrance before combat resumes.")]
+
+        public float waveTransitionPostEntranceDelay = 0.35f;
+
+
+
         [Header("Combat Animation")]
 
         [Tooltip("How long the attacker slides toward the opponent before holding at the strike point.")]
@@ -347,6 +353,26 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
+        /// When true, the battle loop yields without attacking (reward screen + wave transition).
+
+        /// </summary>
+
+        private bool _combatPaused;
+
+
+
+        /// <summary>
+
+        /// Reference to the active auto-combat loop so it can be tracked from BeginCombatAfterDelay.
+
+        /// </summary>
+
+        private Coroutine _battleLoopCoroutine;
+
+
+
+        /// <summary>
+
         /// How many wave enemies the player has defeated this run (each kill +1).
 
         /// </summary>
@@ -524,17 +550,15 @@ namespace Crownsfall.Combat
 
 
 
-            // Wave 1: banner first, then entrance animation, then combat.
+            // Wave 1: same serialized intro as post-reward wave advances (NotifyWaveStarted already fired in Start).
 
-            yield return ShowWaveBannerForCurrentWave();
-
-
-
-            yield return PlayEnemyEntranceAnimation();
+            yield return RunWavePresentationSequence(notifyWaveStarted: false, logWaveTransition: false);
 
 
 
-            StartCoroutine(StartBattleLoop());
+            _battleLoopCoroutine = StartCoroutine(StartBattleLoop());
+
+            yield return _battleLoopCoroutine;
 
         }
 
@@ -569,6 +593,16 @@ namespace Crownsfall.Combat
                 while (_combatRunning && _playerFighter.isAlive && _enemyFighter.isAlive)
 
                 {
+
+                    while (_combatPaused)
+
+                    {
+
+                        yield return null;
+
+                    }
+
+
 
                     // --- Player turn: lunge toward enemy, then apply damage ---
 
@@ -717,6 +751,14 @@ namespace Crownsfall.Combat
 
         /// </summary>
 
+        /// <remarks>
+        /// Each wave gets a fresh <see cref="_enemyFighter"/> data instance from the factory.
+        /// The scene <see cref="enemyFighterRig"/> GameObject is NOT destroyed or re-instantiated —
+        /// the same UI rig is reused: death animation shrinks/fades the old look, then
+        /// <see cref="DisplayEnemyFighter"/> refreshes visuals for the new enemy and
+        /// <see cref="PrepareEnemySpawnStartState"/> hides the rig until the entrance animation runs.
+        /// </remarks>
+
         private void SpawnEnemyForWave(int wave)
 
         {
@@ -745,6 +787,10 @@ namespace Crownsfall.Combat
         private IEnumerator HandleEnemyDefeatedAndAdvanceWave()
 
         {
+
+            _combatPaused = true;
+
+
 
             var balance = CombatBalance.Active;
 
@@ -791,7 +837,7 @@ namespace Crownsfall.Combat
 
 
 
-            // Shrink + fade the defeated enemy rig before spawning the next wave.
+            // Shrink + fade the defeated enemy rig. No Destroy — enemyFighterRig is reused for the next wave.
 
             yield return AnimateFighterDeath(
 
@@ -800,8 +846,6 @@ namespace Crownsfall.Combat
                 GetOrAddCanvasGroup(enemyFighterRig != null ? enemyFighterRig.gameObject : null),
 
                 enemyOriginalScale);
-
-
 
             yield return ShowRewardScreenForClearedWave();
 
@@ -814,6 +858,8 @@ namespace Crownsfall.Combat
             {
 
                 yield return HandleBattleWon();
+
+                _combatPaused = false;
 
                 yield break;
 
@@ -851,35 +897,19 @@ namespace Crownsfall.Combat
 
             UpdateEnemyHealthDisplay();
 
-
-
-            // Banner before the new enemy is displayed or spawned in.
-
-            yield return ShowWaveBannerForCurrentWave();
-
-
-
             DisplayEnemyFighter();
-
-
 
             CaptureEnemyHomePosition();
 
-
-
             PrepareEnemySpawnStartState();
 
+            // Serialized: WaveStarted → banner → entrance → pause → combat loop resumes when this returns.
 
-
-            // Slide/fade in the new enemy before combat resumes.
-
-            yield return PlayEnemyEntranceAnimation();
+            yield return RunWavePresentationSequence(notifyWaveStarted: true, logWaveTransition: true);
 
 
 
-            // WaveStarted / BossStarted events (via NotifyWaveStarted) drive the battle log UI.
-
-            NotifyWaveStarted();
+            _combatPaused = false;
 
         }
 
@@ -1364,6 +1394,16 @@ namespace Crownsfall.Combat
 
         {
 
+            if (_combatPaused)
+
+            {
+
+                yield break;
+
+            }
+
+
+
             // Skills run before the lunge so crit can boost lunge distance for that swing only.
 
             var attackOutcome = ComputePlayerAttackOutcome();
@@ -1435,6 +1475,16 @@ namespace Crownsfall.Combat
         private IEnumerator PerformEnemyAttackWithAnimation()
 
         {
+
+            if (_combatPaused)
+
+            {
+
+                yield break;
+
+            }
+
+
 
             yield return AnimateAttackLunge(enemyFighterRig, enemyHomePosition, playerHomePosition);
 
@@ -2670,7 +2720,7 @@ namespace Crownsfall.Combat
         /// </summary>
         private void ProcessEnemyPoisonAtTurnStart()
         {
-            if (!_enemyIsPoisoned || _enemyPoisonTurnsRemaining <= 0)
+            if (_combatPaused || !_enemyIsPoisoned || _enemyPoisonTurnsRemaining <= 0)
             {
                 return;
             }
@@ -2729,7 +2779,7 @@ namespace Crownsfall.Combat
         /// </summary>
         private void ProcessEnemyBurnAtTurnStart()
         {
-            if (!_enemyIsBurning || _enemyBurnTurnsRemaining <= 0)
+            if (_combatPaused || !_enemyIsBurning || _enemyBurnTurnsRemaining <= 0)
             {
                 return;
             }
@@ -3508,27 +3558,79 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Shows the wave intro banner for the current wave/enemy. No-op when WaveBannerUI is missing.
+        /// Serialized wave intro: optional WaveStarted notify, banner wait, entrance wait, post-entrance pause.
+
+        /// Combat must not resume until this coroutine completes.
 
         /// </summary>
 
-        private IEnumerator ShowWaveBannerForCurrentWave()
+        private IEnumerator RunWavePresentationSequence(bool notifyWaveStarted, bool logWaveTransition)
 
         {
 
-            if (waveBannerUI == null || _enemyFighter == null)
+            if (logWaveTransition)
 
             {
 
-                yield break;
+                Debug.Log("Wave Transition Started");
 
             }
 
 
 
-            var isBoss = _currentProgressionProfile != null && _currentProgressionProfile.isBossWave;
+            if (notifyWaveStarted)
 
-            yield return waveBannerUI.ShowWaveBanner(_waveNumber, _enemyFighter.enemyName, isBoss);
+            {
+
+                NotifyWaveStarted();
+
+            }
+
+
+
+            if (waveBannerUI != null && _enemyFighter != null)
+
+            {
+
+                var isBoss = _currentProgressionProfile != null && _currentProgressionProfile.isBossWave;
+
+                yield return waveBannerUI.ShowWaveBanner(_waveNumber, _enemyFighter.enemyName, isBoss);
+
+            }
+
+            else
+
+            {
+
+                if (waveBannerUI == null)
+
+                {
+
+                    Debug.LogWarning("WaveBannerUI missing — waiting default banner duration.");
+
+                }
+
+                // Match WaveBannerUI default fade/hold timing so combat still pauses without the UI.
+
+                yield return new WaitForSeconds(1.25f);
+
+            }
+
+
+
+            yield return PlayEnemyEntranceAnimation();
+
+            yield return new WaitForSeconds(waveTransitionPostEntranceDelay);
+
+
+
+            if (logWaveTransition)
+
+            {
+
+                Debug.Log("Wave Transition Complete - Combat Resuming");
+
+            }
 
         }
 
@@ -3536,7 +3638,7 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Fires WaveStarted and BossStarted (when applicable) after a wave enemy is spawned.
+        /// Fires WaveStarted and BossStarted (when applicable) before the wave intro banner.
 
         /// </summary>
 
