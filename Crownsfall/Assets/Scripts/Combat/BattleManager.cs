@@ -114,6 +114,18 @@ namespace Crownsfall.Combat
 
         public int debugStartWave = 1;
 
+        // Unity testing only — disable before release.
+
+        [Tooltip("Override player current HP after CalculateStats. Unity testing only; disable before release.")]
+
+        public bool useDebugPlayerHealth = false;
+
+        // Unity testing only — disable before release.
+
+        [Tooltip("Current HP to apply when useDebugPlayerHealth is enabled. Unity testing only; disable before release.")]
+
+        public int debugPlayerHealth = 10;
+
 
 
         private PlayerFighter _playerFighter;
@@ -156,6 +168,26 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
+        /// How many wave enemies the player has defeated this run (each kill +1).
+
+        /// </summary>
+
+        private int _enemiesDefeated;
+
+
+
+        /// <summary>
+
+        /// Highest wave number reached this run (updates when a wave is cleared or on death).
+
+        /// </summary>
+
+        private int _highestWaveReached;
+
+
+
+        /// <summary>
+
         /// Runs when the battle scene starts. Builds fighters, displays rigs, fills HUD,
 
         /// then schedules auto-combat after a short delay.
@@ -176,7 +208,11 @@ namespace Crownsfall.Combat
 
             _playerFighter = BuildPlayerFighter();
 
+            ApplyDebugPlayerHealthOverride();
+
             InitializeWaveNumber();
+
+            _enemiesDefeated = 0;
 
             SpawnEnemyForWave(_waveNumber);
 
@@ -356,6 +392,48 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
+        /// Unity testing only — disable before release.
+
+        /// After BuildPlayerFighter/CloneFighter CalculateStats, optionally overrides current HP.
+
+        /// </summary>
+
+        private void ApplyDebugPlayerHealthOverride()
+
+        {
+
+            if (!useDebugPlayerHealth || _playerFighter == null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            _playerFighter.currentHealth = debugPlayerHealth;
+
+
+
+            if (battleHUD != null)
+
+            {
+
+                battleHUD.SetPlayerHealth(_playerFighter.currentHealth, _playerFighter.maxHealth);
+
+            }
+
+
+
+            Debug.Log($"Debug player health enabled: {debugPlayerHealth}");
+
+        }
+
+
+
+        /// <summary>
+
         /// Sets _waveNumber from debug settings or defaults to wave 1.
 
         /// </summary>
@@ -365,6 +443,8 @@ namespace Crownsfall.Combat
         {
 
             _waveNumber = useDebugStartWave ? Mathf.Max(1, debugStartWave) : 1;
+
+            _highestWaveReached = _waveNumber;
 
             Debug.Log($"Starting battle at wave: {_waveNumber}");
 
@@ -414,6 +494,12 @@ namespace Crownsfall.Combat
 
 
 
+            // One more enemy down — track it for the game over screen.
+
+            _enemiesDefeated++;
+
+
+
             LogCombatMessage(rewardMessage);
 
 
@@ -437,6 +523,8 @@ namespace Crownsfall.Combat
 
 
             _waveNumber++;
+
+            _highestWaveReached = Mathf.Max(_highestWaveReached, _waveNumber);
 
             SpawnEnemyForWave(_waveNumber);
 
@@ -476,7 +564,31 @@ namespace Crownsfall.Combat
 
             _combatRunning = false;
 
+            _highestWaveReached = Mathf.Max(_highestWaveReached, _waveNumber);
+
+
+
             LogCombatMessage($"Fighter defeated! Final Score: {_playerFighter.currentScore}");
+
+
+
+            if (battleHUD != null)
+
+            {
+
+                battleHUD.ShowGameOver(
+
+                    _playerFighter.fighterName,
+
+                    _playerFighter.currentScore,
+
+                    _waveNumber,
+
+                    _enemiesDefeated,
+
+                    _highestWaveReached);
+
+            }
 
         }
 
@@ -891,6 +1003,8 @@ namespace Crownsfall.Combat
 
 
             // Reset score/log only — InitializeForBattle hardcodes wave 1; use _waveNumber instead.
+
+            battleHUD.HideGameOver();
 
             battleHUD.SetScore(0);
 

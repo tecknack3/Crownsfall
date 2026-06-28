@@ -2,6 +2,7 @@ using System.Text;
 using Crownsfall.Characters;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Crownsfall.Combat
@@ -35,8 +36,38 @@ namespace Crownsfall.Combat
         [Tooltip("Maximum log lines kept on screen before older lines drop off.")]
         [SerializeField] private int maxLogLines = 12;
 
+        [Header("Game Over Panel")]
+        [Tooltip("Full-screen overlay shown when the player is defeated. Hidden at battle start.")]
+        [SerializeField] private GameObject gameOverPanel;
+
+        [SerializeField] private TMP_Text gameOverTitleText;
+        [SerializeField] private TMP_Text gameOverFighterNameText;
+        [SerializeField] private TMP_Text gameOverFinalScoreText;
+        [SerializeField] private TMP_Text gameOverWaveReachedText;
+        [SerializeField] private TMP_Text gameOverEnemiesDefeatedText;
+        [SerializeField] private TMP_Text gameOverHighestWaveText;
+
+        [SerializeField] private Button playAgainButton;
+        [SerializeField] private Button characterBuilderButton;
+
         private readonly StringBuilder _logBuilder = new StringBuilder();
         private int _logLineCount;
+
+        private void Awake()
+        {
+            // Panel starts hidden; BattleManager shows it only after player death.
+            HideGameOver();
+
+            if (playAgainButton != null)
+            {
+                playAgainButton.onClick.AddListener(OnPlayAgainClicked);
+            }
+
+            if (characterBuilderButton != null)
+            {
+                characterBuilderButton.onClick.AddListener(OnCharacterBuilderClicked);
+            }
+        }
 
         /// <summary>
         /// Resets wave, score, and log to battle-start defaults.
@@ -160,6 +191,56 @@ namespace Crownsfall.Combat
         public void SetTitle(string title)
         {
             SetText(titleText, title);
+        }
+
+        /// <summary>
+        /// Hides the game over overlay (called when a new battle begins).
+        /// </summary>
+        public void HideGameOver()
+        {
+            if (gameOverPanel != null)
+            {
+                gameOverPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Shows the game over overlay with run stats after the player is defeated.
+        /// </summary>
+        public void ShowGameOver(
+            string fighterName,
+            int finalScore,
+            int waveReached,
+            int enemiesDefeated,
+            int highestWaveReached)
+        {
+            SetText(gameOverTitleText, "YOU HAVE FALLEN");
+            SetText(gameOverFighterNameText, fighterName);
+            SetText(gameOverFinalScoreText, $"Final Score: {finalScore}");
+            SetText(gameOverWaveReachedText, $"Wave Reached: {waveReached}");
+            SetText(gameOverEnemiesDefeatedText, $"Enemies Defeated: {enemiesDefeated}");
+            SetText(gameOverHighestWaveText, $"Highest Wave: {highestWaveReached}");
+
+            if (gameOverPanel != null)
+            {
+                gameOverPanel.SetActive(true);
+            }
+        }
+
+        /// <summary>
+        /// Reloads BattleScene. GameSession keeps the same fighter across the load.
+        /// </summary>
+        private void OnPlayAgainClicked()
+        {
+            SceneManager.LoadScene("BattleScene");
+        }
+
+        /// <summary>
+        /// Returns to Character Builder so the player can edit or rebuild their fighter.
+        /// </summary>
+        private void OnCharacterBuilderClicked()
+        {
+            SceneManager.LoadScene("CharacterBuilder");
         }
 
         /// <summary>

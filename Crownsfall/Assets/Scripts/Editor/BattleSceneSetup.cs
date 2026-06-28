@@ -492,6 +492,22 @@ namespace Crownsfall.Editor
             public TextMeshProUGUI HealthText;
         }
 
+        /// <summary>
+        /// Serialized references for the game over overlay wired into BattleHUD.
+        /// </summary>
+        private struct GameOverPanelRefs
+        {
+            public GameObject Panel;
+            public TextMeshProUGUI TitleText;
+            public TextMeshProUGUI FighterNameText;
+            public TextMeshProUGUI FinalScoreText;
+            public TextMeshProUGUI WaveReachedText;
+            public TextMeshProUGUI EnemiesDefeatedText;
+            public TextMeshProUGUI HighestWaveText;
+            public Button PlayAgainButton;
+            public Button CharacterBuilderButton;
+        }
+
         // --- Production UI (Canvas + FighterRig + BattleHUD) ---
 
         /// <summary>
@@ -550,6 +566,7 @@ namespace Crownsfall.Editor
                 out var playerHealthFill, out var enemyHealthFill);
             CreateProductionBattleLogPanel(hudRoot, out var battleLogText);
             CreateBottomStatsBar(hudRoot, out var playerStatsText, out var enemyStatsText);
+            var gameOverRefs = CreateGameOverPanel(hudRoot);
 
             WireBattleHud(
                 battleHud,
@@ -560,7 +577,8 @@ namespace Crownsfall.Editor
                 playerStatsText,
                 enemyStatsText,
                 playerHealthFill,
-                enemyHealthFill);
+                enemyHealthFill,
+                gameOverRefs);
 
             return battleHud;
         }
@@ -920,6 +938,115 @@ namespace Crownsfall.Editor
             return bottomBar;
         }
 
+        /// <summary>
+        /// Full-screen game over overlay under BattleHUD. Hidden by default (SetActive false).
+        /// BattleManager fills stat lines when the player dies; buttons reload scenes.
+        /// </summary>
+        private static GameOverPanelRefs CreateGameOverPanel(RectTransform hudRoot)
+        {
+            var panel = CreateRect("GameOverPanel", hudRoot);
+            StretchToParent(panel);
+
+            // Dim the battle HUD behind the summary card.
+            var backdrop = panel.gameObject.AddComponent<Image>();
+            backdrop.color = new Color(0.04f, 0.05f, 0.1f, 0.92f);
+            backdrop.raycastTarget = true;
+
+            var card = CreateRect("GameOverCard", panel);
+            card.anchorMin = new Vector2(0.5f, 0.5f);
+            card.anchorMax = new Vector2(0.5f, 0.5f);
+            card.pivot = new Vector2(0.5f, 0.5f);
+            card.anchoredPosition = Vector2.zero;
+            card.sizeDelta = new Vector2(880f, 920f);
+
+            var cardImage = card.gameObject.AddComponent<Image>();
+            cardImage.color = new Color(0.08f, 0.09f, 0.15f, 0.98f);
+            cardImage.raycastTarget = true;
+
+            var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(48, 48, 40, 40);
+            layout.spacing = 16f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            var titleText = CreateGameOverStatLine(card, "GameOverTitleText", "YOU HAVE FALLEN", 48f, FontStyles.Bold);
+            titleText.color = new Color(0.92f, 0.45f, 0.42f, 1f);
+
+            var fighterNameText = CreateGameOverStatLine(card, "GameOverFighterNameText", "Fighter", 36f, FontStyles.Bold);
+            var finalScoreText = CreateGameOverStatLine(card, "GameOverFinalScoreText", "Final Score: 0", 32f, FontStyles.Normal);
+            var waveReachedText = CreateGameOverStatLine(card, "GameOverWaveReachedText", "Wave Reached: 0", 30f, FontStyles.Normal);
+            var enemiesDefeatedText = CreateGameOverStatLine(card, "GameOverEnemiesDefeatedText", "Enemies Defeated: 0", 30f, FontStyles.Normal);
+            var highestWaveText = CreateGameOverStatLine(card, "GameOverHighestWaveText", "Highest Wave: 0", 30f, FontStyles.Normal);
+
+            var buttonRow = CreateRect("GameOverButtonRow", card);
+            buttonRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 100f;
+
+            var buttonLayout = buttonRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            buttonLayout.spacing = 24f;
+            buttonLayout.childAlignment = TextAnchor.MiddleCenter;
+            buttonLayout.childControlWidth = true;
+            buttonLayout.childControlHeight = true;
+            buttonLayout.childForceExpandWidth = true;
+            buttonLayout.childForceExpandHeight = true;
+
+            var playAgainButton = CreateGameOverButton(buttonRow, "PlayAgainButton", "Play Again",
+                new Color(0.18f, 0.62f, 0.36f, 1f));
+            var characterBuilderButton = CreateGameOverButton(buttonRow, "CharacterBuilderButton", "Character Builder",
+                new Color(0.24f, 0.42f, 0.72f, 1f));
+
+            // Hidden until BattleManager calls ShowGameOver after player death.
+            panel.gameObject.SetActive(false);
+
+            return new GameOverPanelRefs
+            {
+                Panel = panel.gameObject,
+                TitleText = titleText,
+                FighterNameText = fighterNameText,
+                FinalScoreText = finalScoreText,
+                WaveReachedText = waveReachedText,
+                EnemiesDefeatedText = enemiesDefeatedText,
+                HighestWaveText = highestWaveText,
+                PlayAgainButton = playAgainButton,
+                CharacterBuilderButton = characterBuilderButton
+            };
+        }
+
+        private static TextMeshProUGUI CreateGameOverStatLine(
+            RectTransform parent,
+            string objectName,
+            string defaultText,
+            float fontSize,
+            FontStyles fontStyle)
+        {
+            var line = CreateNamedTmpText(parent, objectName, defaultText, fontSize, fontStyle);
+            line.alignment = TextAlignmentOptions.Center;
+            line.gameObject.AddComponent<LayoutElement>().preferredHeight = fontSize + 16f;
+            return line;
+        }
+
+        private static Button CreateGameOverButton(RectTransform parent, string buttonName, string label, Color color)
+        {
+            var buttonRect = CreateRect(buttonName, parent);
+
+            var image = buttonRect.gameObject.AddComponent<Image>();
+            image.color = color;
+
+            var button = buttonRect.gameObject.AddComponent<Button>();
+            var colors = button.colors;
+            colors.highlightedColor = color * 1.15f;
+            colors.pressedColor = color * 0.75f;
+            button.colors = colors;
+
+            var text = CreateNamedTmpText(buttonRect, "Label", label, 32f, FontStyles.Bold);
+            text.alignment = TextAlignmentOptions.Center;
+            StretchToParent(text.rectTransform);
+
+            return button;
+        }
+
         private static TextMeshProUGUI CreateNamedTmpText(
             Transform parent,
             string objectName,
@@ -941,7 +1068,8 @@ namespace Crownsfall.Editor
             TextMeshProUGUI playerStatsText,
             TextMeshProUGUI enemyStatsText,
             Image playerHealthFill,
-            Image enemyHealthFill)
+            Image enemyHealthFill,
+            GameOverPanelRefs gameOverRefs)
         {
             var serialized = new SerializedObject(hud);
             serialized.FindProperty("titleText").objectReferenceValue = titleText;
@@ -952,6 +1080,16 @@ namespace Crownsfall.Editor
             serialized.FindProperty("enemyStatsText").objectReferenceValue = enemyStatsText;
             serialized.FindProperty("playerHealthBarFill").objectReferenceValue = playerHealthFill;
             serialized.FindProperty("enemyHealthBarFill").objectReferenceValue = enemyHealthFill;
+
+            serialized.FindProperty("gameOverPanel").objectReferenceValue = gameOverRefs.Panel;
+            serialized.FindProperty("gameOverTitleText").objectReferenceValue = gameOverRefs.TitleText;
+            serialized.FindProperty("gameOverFighterNameText").objectReferenceValue = gameOverRefs.FighterNameText;
+            serialized.FindProperty("gameOverFinalScoreText").objectReferenceValue = gameOverRefs.FinalScoreText;
+            serialized.FindProperty("gameOverWaveReachedText").objectReferenceValue = gameOverRefs.WaveReachedText;
+            serialized.FindProperty("gameOverEnemiesDefeatedText").objectReferenceValue = gameOverRefs.EnemiesDefeatedText;
+            serialized.FindProperty("gameOverHighestWaveText").objectReferenceValue = gameOverRefs.HighestWaveText;
+            serialized.FindProperty("playAgainButton").objectReferenceValue = gameOverRefs.PlayAgainButton;
+            serialized.FindProperty("characterBuilderButton").objectReferenceValue = gameOverRefs.CharacterBuilderButton;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(hud);
         }
@@ -1051,7 +1189,69 @@ namespace Crownsfall.Editor
                 EditorUtility.SetDirty(battleManager);
             }
 
+            EnsureGameOverPanelOnBattleHud();
+
             return true;
+        }
+
+        /// <summary>
+        /// Adds GameOverPanel to an existing BattleHUD when polishing or upgrading older scenes.
+        /// </summary>
+        private static void EnsureGameOverPanelOnBattleHud()
+        {
+            var battleHud = Object.FindObjectOfType<BattleHUD>();
+            if (battleHud == null)
+            {
+                return;
+            }
+
+            var hudRoot = battleHud.GetComponent<RectTransform>();
+            var existingPanel = hudRoot.Find("GameOverPanel");
+            GameOverPanelRefs gameOverRefs;
+
+            if (existingPanel != null)
+            {
+                existingPanel.SetAsLastSibling();
+                gameOverRefs = CollectGameOverPanelRefs(existingPanel);
+            }
+            else
+            {
+                gameOverRefs = CreateGameOverPanel(hudRoot);
+            }
+
+            WireGameOverPanelOnly(battleHud, gameOverRefs);
+        }
+
+        private static GameOverPanelRefs CollectGameOverPanelRefs(Transform panelRoot)
+        {
+            return new GameOverPanelRefs
+            {
+                Panel = panelRoot.gameObject,
+                TitleText = panelRoot.Find("GameOverCard/GameOverTitleText")?.GetComponent<TextMeshProUGUI>(),
+                FighterNameText = panelRoot.Find("GameOverCard/GameOverFighterNameText")?.GetComponent<TextMeshProUGUI>(),
+                FinalScoreText = panelRoot.Find("GameOverCard/GameOverFinalScoreText")?.GetComponent<TextMeshProUGUI>(),
+                WaveReachedText = panelRoot.Find("GameOverCard/GameOverWaveReachedText")?.GetComponent<TextMeshProUGUI>(),
+                EnemiesDefeatedText = panelRoot.Find("GameOverCard/GameOverEnemiesDefeatedText")?.GetComponent<TextMeshProUGUI>(),
+                HighestWaveText = panelRoot.Find("GameOverCard/GameOverHighestWaveText")?.GetComponent<TextMeshProUGUI>(),
+                PlayAgainButton = panelRoot.Find("GameOverCard/GameOverButtonRow/PlayAgainButton")?.GetComponent<Button>(),
+                CharacterBuilderButton = panelRoot.Find("GameOverCard/GameOverButtonRow/CharacterBuilderButton")?.GetComponent<Button>()
+            };
+        }
+
+        private static void WireGameOverPanelOnly(BattleHUD hud, GameOverPanelRefs gameOverRefs)
+        {
+            var serialized = new SerializedObject(hud);
+            serialized.FindProperty("gameOverPanel").objectReferenceValue = gameOverRefs.Panel;
+            serialized.FindProperty("gameOverTitleText").objectReferenceValue = gameOverRefs.TitleText;
+            serialized.FindProperty("gameOverFighterNameText").objectReferenceValue = gameOverRefs.FighterNameText;
+            serialized.FindProperty("gameOverFinalScoreText").objectReferenceValue = gameOverRefs.FinalScoreText;
+            serialized.FindProperty("gameOverWaveReachedText").objectReferenceValue = gameOverRefs.WaveReachedText;
+            serialized.FindProperty("gameOverEnemiesDefeatedText").objectReferenceValue = gameOverRefs.EnemiesDefeatedText;
+            serialized.FindProperty("gameOverHighestWaveText").objectReferenceValue = gameOverRefs.HighestWaveText;
+            serialized.FindProperty("playAgainButton").objectReferenceValue = gameOverRefs.PlayAgainButton;
+            serialized.FindProperty("characterBuilderButton").objectReferenceValue = gameOverRefs.CharacterBuilderButton;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(hud);
         }
 
         /// <summary>

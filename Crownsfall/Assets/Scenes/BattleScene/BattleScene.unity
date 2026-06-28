@@ -184,6 +184,15 @@ MonoBehaviour:
   playerHealthBarFill: {fileID: 352441351}
   enemyHealthBarFill: {fileID: 2025553874}
   maxLogLines: 12
+  gameOverPanel: {fileID: 0}
+  gameOverTitleText: {fileID: 0}
+  gameOverFighterNameText: {fileID: 0}
+  gameOverFinalScoreText: {fileID: 0}
+  gameOverWaveReachedText: {fileID: 0}
+  gameOverEnemiesDefeatedText: {fileID: 0}
+  gameOverHighestWaveText: {fileID: 0}
+  playAgainButton: {fileID: 0}
+  characterBuilderButton: {fileID: 0}
 --- !u!1 &48675597
 GameObject:
   m_ObjectHideFlags: 0
@@ -419,8 +428,10 @@ MonoBehaviour:
   battleStartDelay: 1
   attackInterval: 0.8
   waveTransitionDelay: 1.2
-  useDebugStartWave: 1
-  debugStartWave: 10
+  useDebugStartWave: 0
+  debugStartWave: 1
+  useDebugPlayerHealth: 1
+  debugPlayerHealth: 1
 --- !u!4 &80257748
 Transform:
   m_ObjectHideFlags: 0
