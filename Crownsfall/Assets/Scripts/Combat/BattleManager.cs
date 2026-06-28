@@ -177,9 +177,9 @@ namespace Crownsfall.Combat
 
 
 
-        [Tooltip("How long the enemy rig fades back in after the next wave spawns.")]
+        [Tooltip("How long the enemy rig scales/fades in when a new wave spawns (80% scale, 0 alpha → full).")]
 
-        public float respawnFadeDuration = 0.25f;
+        public float enemySpawnDuration = 0.35f;
 
 
 
@@ -414,6 +414,8 @@ namespace Crownsfall.Combat
 
             CaptureFighterOriginalScales();
 
+            PrepareEnemySpawnStartState();
+
             PopulateBattleUI();
 
             LogBattleStart();
@@ -473,6 +475,12 @@ namespace Crownsfall.Combat
             // Refresh health bars and score right before the first swing.
 
             RefreshCombatHud();
+
+
+
+            // Wave 1: spawn animation must finish before combat (and before enemy can attack).
+
+            yield return PlayEnemySpawnAnimation();
 
 
 
@@ -787,19 +795,13 @@ namespace Crownsfall.Combat
 
 
 
-            // Restore scale/alpha so the new enemy appears at full size.
-
-            yield return ResetFighterForRespawn(
-
-                GetRigTransform(enemyFighterRig),
-
-                GetOrAddCanvasGroup(enemyFighterRig != null ? enemyFighterRig.gameObject : null),
-
-                enemyOriginalScale);
-
-
-
             CaptureEnemyHomePosition();
+
+
+
+            // Scale/fade in the new enemy before combat resumes (replaces old respawn fade).
+
+            yield return PlayEnemySpawnAnimation();
 
 
 
@@ -1673,19 +1675,73 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Respawn animation: snap scale back to original, then fade CanvasGroup alpha from 0 to 1.
+        /// Sets the enemy rig to spawn-animation start state (80% scale, invisible).
 
-        /// Called after DisplayEnemyFighter updates sprites for the next wave.
+        /// Called at battle start so wave 1 waits hidden until PlayEnemySpawnAnimation runs.
 
         /// </summary>
 
-        private IEnumerator ResetFighterForRespawn(Transform rig, CanvasGroup canvasGroup, Vector3 originalScale)
+        private void PrepareEnemySpawnStartState()
 
         {
 
-            if (rig == null)
+            var enemyTransform = GetRigTransform(enemyFighterRig);
+
+            var canvasGroup = GetOrAddCanvasGroup(enemyFighterRig != null ? enemyFighterRig.gameObject : null);
+
+            if (enemyTransform == null)
 
             {
+
+                return;
+
+            }
+
+
+
+            enemyTransform.localScale = enemyOriginalScale * 0.8f;
+
+            if (canvasGroup != null)
+
+            {
+
+                canvasGroup.alpha = 0f;
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Spawn animation: lerp from 80% scale / 0 alpha to full size over enemySpawnDuration (ease out).
+
+        /// Resets scale and alpha at the start so death state does not carry over. Does not move combat logic.
+
+        /// </summary>
+
+        private IEnumerator PlayEnemySpawnAnimation()
+
+        {
+
+            Debug.Log("Enemy Spawn Animation Started");
+
+
+
+            var enemyRect = GetRigRectTransform(enemyFighterRig);
+
+            var enemyTransform = GetRigTransform(enemyFighterRig);
+
+            var canvasGroup = GetOrAddCanvasGroup(enemyFighterRig != null ? enemyFighterRig.gameObject : null);
+
+
+
+            if (enemyTransform == null)
+
+            {
+
+                Debug.Log("Enemy Spawn Animation Finished");
 
                 yield break;
 
@@ -1693,45 +1749,87 @@ namespace Crownsfall.Combat
 
 
 
-            rig.localScale = originalScale;
+            var startScale = enemyOriginalScale * 0.8f;
+
+            var endScale = enemyOriginalScale;
 
 
 
-            if (canvasGroup == null)
+            // Always start from spawn pose — not from death shrink (0.1 scale) or previous alpha.
+
+            enemyTransform.localScale = startScale;
+
+            if (canvasGroup != null)
 
             {
+
+                canvasGroup.alpha = 0f;
+
+            }
+
+
+
+            if (enemyRect != null)
+
+            {
+
+                SetRectAnchoredPosition(enemyRect, enemyHomePosition);
+
+            }
+
+
+
+            if (enemySpawnDuration <= 0f)
+
+            {
+
+                enemyTransform.localScale = endScale;
+
+                if (canvasGroup != null)
+
+                {
+
+                    canvasGroup.alpha = 1f;
+
+                }
+
+
+
+                Debug.Log("Enemy Spawn Animation Finished");
 
                 yield break;
 
             }
 
 
-
-            if (respawnFadeDuration <= 0f)
-
-            {
-
-                canvasGroup.alpha = 1f;
-
-                yield break;
-
-            }
-
-
-
-            canvasGroup.alpha = 0f;
 
             var elapsed = 0f;
 
-
-
-            while (elapsed < respawnFadeDuration)
+            while (elapsed < enemySpawnDuration)
 
             {
 
                 elapsed += Time.deltaTime;
 
-                canvasGroup.alpha = Mathf.Clamp01(elapsed / respawnFadeDuration);
+                var t = Mathf.Clamp01(elapsed / enemySpawnDuration);
+
+                // Ease out: fast start, gentle settle at full size.
+
+                var eased = 1f - (1f - t) * (1f - t);
+
+
+
+                enemyTransform.localScale = Vector3.Lerp(startScale, endScale, eased);
+
+                if (canvasGroup != null)
+
+                {
+
+                    canvasGroup.alpha = Mathf.Lerp(0f, 1f, eased);
+
+                }
+
+
 
                 yield return null;
 
@@ -1739,7 +1837,29 @@ namespace Crownsfall.Combat
 
 
 
-            canvasGroup.alpha = 1f;
+            enemyTransform.localScale = endScale;
+
+            if (canvasGroup != null)
+
+            {
+
+                canvasGroup.alpha = 1f;
+
+            }
+
+
+
+            if (enemyRect != null)
+
+            {
+
+                SetRectAnchoredPosition(enemyRect, enemyHomePosition);
+
+            }
+
+
+
+            Debug.Log("Enemy Spawn Animation Finished");
 
         }
 

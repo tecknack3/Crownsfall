@@ -442,7 +442,7 @@ MonoBehaviour:
   hitShakeSteps: 6
   deathShrinkDuration: 0.35
   deathFadeDuration: 0.35
-  respawnFadeDuration: 0.25
+  enemySpawnDuration: 0.35
   victoryWaveNumber: 3
   victoryMoveUpAmount: 30
   victoryScaleMultiplier: 1.08
