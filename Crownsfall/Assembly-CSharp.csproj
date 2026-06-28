@@ -124,6 +124,7 @@
     <Compile Include="Assets/Scripts/Combat/Skills/ISkillEffect.cs" />
     <Compile Include="Assets/Scripts/Combat/BattleHUD.cs" />
     <Compile Include="Assets/Scripts/UI/CharacterBuilderManager.cs" />
+    <Compile Include="Assets/Scripts/Combat/Events/CombatLogUIListener.cs" />
     <Compile Include="Assets/Scripts/Combat/FighterRig.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_TextInfoDebugTool.cs" />
   </ItemGroup>

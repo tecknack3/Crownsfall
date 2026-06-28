@@ -316,6 +316,7 @@ GameObject:
   - component: {fileID: 80257748}
   - component: {fileID: 80257747}
   - component: {fileID: 80257749}
+  - component: {fileID: 80257750}
   m_Layer: 0
   m_Name: BattleManager
   m_TagString: Untagged
@@ -462,6 +463,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e4c4a0f09e2241b7bc5ba713ef64e71, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &80257750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 80257746}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a12eec8ed22c45b383e4b03ce19f7c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  battleHUD: {fileID: 11011402}
 --- !u!1 &120046763
 GameObject:
   m_ObjectHideFlags: 0

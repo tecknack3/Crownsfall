@@ -374,6 +374,7 @@
 "Assets/Scripts/Combat/Events/CombatEvent.cs"
 "Assets/Scripts/Combat/Events/CombatEventBus.cs"
 "Assets/Scripts/Combat/Events/CombatEventLogger.cs"
+"Assets/Scripts/Combat/Events/CombatLogUIListener.cs"
 "Assets/Scripts/Combat/FighterRig.cs"
 "Assets/Scripts/Combat/ProgressionEngine.cs"
 "Assets/Scripts/Combat/ProgressionProfile.cs"

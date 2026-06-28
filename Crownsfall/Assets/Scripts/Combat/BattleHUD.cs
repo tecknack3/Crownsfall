@@ -34,7 +34,7 @@ namespace Crownsfall.Combat
         [SerializeField] private Image enemyHealthBarFill;
 
         [Tooltip("Maximum log lines kept on screen before older lines drop off.")]
-        [SerializeField] private int maxLogLines = 12;
+        [SerializeField] private int maxLogLines = 6;
 
         [Header("Game Over Panel")]
         [Tooltip("Full-screen overlay shown when the player is defeated. Hidden at battle start.")]
@@ -187,6 +187,14 @@ namespace Crownsfall.Combat
             {
                 battleLogText.text = string.Empty;
             }
+        }
+
+        /// <summary>
+        /// Clears all battle log text (alias for event-driven listeners).
+        /// </summary>
+        public void ClearBattleLog()
+        {
+            ClearLog();
         }
 
         /// <summary>
