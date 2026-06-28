@@ -71,6 +71,66 @@ namespace Crownsfall.Editor
                 "OK");
         }
 
+        /// <summary>
+        /// Adds PowerSummaryText under an existing FighterCardPanel/Content if it is missing.
+        /// </summary>
+        [MenuItem("Tools/Fighter Tools/Add Power Summary To Fighter Card")]
+        public static void AddPowerSummaryToExistingPanelFromMenu()
+        {
+            if (!TryEnsureCharacterBuilderScene())
+            {
+                return;
+            }
+
+            var mainLayout = FindMainLayout();
+            if (mainLayout == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Power Summary",
+                    "Could not find Canvas/MainLayout in the active scene.",
+                    "OK");
+                return;
+            }
+
+            var content = mainLayout.Find(PanelName + "/Content");
+            if (content == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Power Summary",
+                    PanelName + " not found.\n\nRun Add Fighter Card Panel first.",
+                    "OK");
+                return;
+            }
+
+            var existing = content.Find("PowerSummaryText");
+            if (existing != null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Power Summary",
+                    "PowerSummaryText already exists on the Fighter Card.",
+                    "OK");
+                return;
+            }
+
+            CreatePowerSummaryText(content.GetComponent<RectTransform>());
+
+            // Place after fighter name, before stats panel.
+            var summary = content.Find("PowerSummaryText");
+            var nameText = content.Find("CardFighterNameText");
+            if (summary != null && nameText != null)
+            {
+                summary.SetSiblingIndex(nameText.GetSiblingIndex() + 1);
+            }
+
+            MarkSceneDirtyAndSave();
+
+            EditorUtility.DisplayDialog(
+                "Power Summary",
+                "PowerSummaryText added under FighterCardPanel/Content.\n\n" +
+                "Run Tools → Fighter Tools → Auto Wire Character Builder to wire the reference.",
+                "OK");
+        }
+
         private static bool TryEnsureCharacterBuilderScene()
         {
             var activeScene = EditorSceneManager.GetActiveScene();
@@ -132,6 +192,7 @@ namespace Crownsfall.Editor
             CreateTitle(content);
             CreateCardPreviewArea(content);
             CreateFighterNameText(content);
+            CreatePowerSummaryText(content);
             CreateStatTexts(content);
             CreateActionButtons(content);
 
@@ -183,6 +244,19 @@ namespace Crownsfall.Editor
             var nameText = CreateTmpText("CardFighterNameText", parent, "Fighter Name", 40, FontStyles.Bold);
             nameText.alignment = TextAlignmentOptions.Center;
             nameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 56f;
+        }
+
+        private static void CreatePowerSummaryText(RectTransform parent)
+        {
+            var summary = CreateTmpText(
+                "PowerSummaryText",
+                parent,
+                "Head: Common\nBody: Rare\nWeapon: Legendary\nMount: Epic",
+                28,
+                FontStyles.Normal);
+            summary.alignment = TextAlignmentOptions.Center;
+            summary.richText = true;
+            summary.gameObject.AddComponent<LayoutElement>().preferredHeight = 140f;
         }
 
         private static void CreateStatTexts(RectTransform parent)

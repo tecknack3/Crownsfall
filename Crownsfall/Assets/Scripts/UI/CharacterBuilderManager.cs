@@ -109,6 +109,9 @@ namespace Crownsfall.UI
         public TMP_Text cardSpeedText;
         public TMP_Text cardHealthText;
 
+        [Tooltip("Optional. Shows Head/Body/Weapon/Mount rarity on the fighter card.")]
+        public TMP_Text cardPowerSummaryText;
+
         public Button startBattleButton;
         public Button backEditButton;
 
@@ -467,6 +470,8 @@ namespace Crownsfall.UI
                 cardHealthText.text = $"Health: {fighter.maxHealth}";
             }
 
+            UpdateFighterCardPowerSummary(fighter);
+
             if (fighterCardPanel != null)
             {
                 fighterCardPanel.SetActive(true);
@@ -572,7 +577,27 @@ namespace Crownsfall.UI
         }
 
         /// <summary>
+        /// Fills the fighter card power summary with colored rarity per equipment slot.
+        /// Example: "Head: Common" with "Common" tinted via GetRarityColor().
+        /// </summary>
+        private void UpdateFighterCardPowerSummary(PlayerFighter fighter)
+        {
+            if (cardPowerSummaryText == null || fighter == null)
+            {
+                return;
+            }
+
+            cardPowerSummaryText.richText = true;
+            cardPowerSummaryText.text =
+                FormatSlotRarityLine("Head", fighter.head) + "\n" +
+                FormatSlotRarityLine("Body", fighter.body) + "\n" +
+                FormatSlotRarityLine("Weapon", fighter.weapon) + "\n" +
+                FormatSlotRarityLine("Mount", fighter.mount);
+        }
+
+        /// <summary>
         /// Shows the item name and rarity on two lines, or "None" when nothing is available.
+        /// Rarity uses TMP rich text so GetRarityColor() tints the second line.
         /// </summary>
         private static void UpdateNameText(TMP_Text nameText, EquipmentItemSO item)
         {
@@ -580,6 +605,8 @@ namespace Crownsfall.UI
             {
                 return;
             }
+
+            nameText.richText = true;
 
             if (item == null)
             {
@@ -589,6 +616,20 @@ namespace Crownsfall.UI
 
             var rarityHex = ColorUtility.ToHtmlStringRGB(item.GetRarityColor());
             nameText.text = $"{item.itemName}\n<color=#{rarityHex}>{item.GetRarityDisplayName()}</color>";
+        }
+
+        /// <summary>
+        /// One line for the fighter card: "Head: Rare" with the rarity word colored.
+        /// </summary>
+        private static string FormatSlotRarityLine(string slotLabel, EquipmentItemSO item)
+        {
+            if (item == null)
+            {
+                return $"{slotLabel}: None";
+            }
+
+            var rarityHex = ColorUtility.ToHtmlStringRGB(item.GetRarityColor());
+            return $"{slotLabel}: <color=#{rarityHex}>{item.GetRarityDisplayName()}</color>";
         }
 
         /// <summary>

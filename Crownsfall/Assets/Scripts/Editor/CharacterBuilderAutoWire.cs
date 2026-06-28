@@ -223,6 +223,12 @@ namespace Crownsfall.Editor
                 mainLayout,
                 "FighterCardPanel/Content/StatsPanel/CardHealthText",
                 missing);
+            AssignComponentReference<TMP_Text>(
+                serializedManager,
+                "cardPowerSummaryText",
+                mainLayout,
+                "FighterCardPanel/Content/PowerSummaryText",
+                missing);
 
             AssignComponentReference<Button>(
                 serializedManager,
