@@ -183,6 +183,38 @@ namespace Crownsfall.Combat
 
 
 
+        [Header("Victory (optional)")]
+
+        [Tooltip("Wave number that ends the battle in victory. 0 = endless (no victory). Example: 10 = win after wave 10 is cleared.")]
+
+        public int victoryWaveNumber = 0;
+
+
+
+        [Tooltip("How far the player rig moves upward during the victory pose (UI pixels).")]
+
+        public float victoryMoveUpAmount = 30f;
+
+
+
+        [Tooltip("Peak scale multiplier during the victory pose (1.08 = 8% larger than rest size).")]
+
+        public float victoryScaleMultiplier = 1.08f;
+
+
+
+        [Tooltip("Seconds to hold the victory pose at peak before returning to idle.")]
+
+        public float victoryHoldDuration = 0.5f;
+
+
+
+        [Tooltip("Seconds to lerp in and out of the victory pose.")]
+
+        public float victoryAnimDuration = 0.3f;
+
+
+
         [Header("Debug (Editor Testing Only)")]
 
         [Tooltip("Editor testing only for boss waves. Should be disabled before release.")]
@@ -324,6 +356,16 @@ namespace Crownsfall.Combat
         /// </summary>
 
         private Vector3 enemyOriginalScale = Vector3.one;
+
+
+
+        /// <summary>
+
+        /// Ensures the victory pose animation runs at most once per battle.
+
+        /// </summary>
+
+        private bool _victoryAnimationPlayed;
 
 
 
@@ -703,6 +745,20 @@ namespace Crownsfall.Combat
 
 
 
+            // Final wave cleared — play victory once, then stop combat (no next wave).
+
+            if (IsBattleWon())
+
+            {
+
+                yield return HandleBattleWon();
+
+                yield break;
+
+            }
+
+
+
             yield return new WaitForSeconds(waveTransitionDelay);
 
 
@@ -749,6 +805,238 @@ namespace Crownsfall.Combat
 
             // WaveStarted / BossStarted events (via NotifyWaveStarted) drive the battle log UI.
             NotifyWaveStarted();
+
+        }
+
+
+
+        /// <summary>
+
+        /// True when victoryWaveNumber is set and the current wave (just cleared) meets or exceeds it.
+
+        /// </summary>
+
+        private bool IsBattleWon()
+
+        {
+
+            return victoryWaveNumber > 0 && _waveNumber >= victoryWaveNumber;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Called when the final wave enemy is defeated. Plays the victory pose once, raises BattleWon, stops combat.
+
+        /// </summary>
+
+        private IEnumerator HandleBattleWon()
+
+        {
+
+            if (!_victoryAnimationPlayed)
+
+            {
+
+                _victoryAnimationPlayed = true;
+
+                yield return PlayVictoryAnimation();
+
+            }
+
+
+
+            _combatRunning = false;
+
+            _highestWaveReached = Mathf.Max(_highestWaveReached, _waveNumber);
+
+
+
+            RaiseCombatEvent(
+
+                CombatEventType.BattleWon,
+
+                $"Victory! Wave {_waveNumber} cleared!",
+
+                sourceName: _playerFighter.fighterName,
+
+                targetName: _enemyFighter?.enemyName,
+
+                score: _playerFighter.currentScore);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Victory pose: player rig moves up slightly, scales up, holds, then returns to home position and scale.
+
+        /// Uses anchoredPosition (like attack lunge) and localScale (like death animation).
+
+        /// </summary>
+
+        private IEnumerator PlayVictoryAnimation()
+
+        {
+
+            Debug.Log("Playing Victory Animation");
+
+
+
+            var playerRect = GetRigRectTransform(playerFighterRig);
+
+            var playerTransform = GetRigTransform(playerFighterRig);
+
+            if (playerRect == null || playerTransform == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var homePos = playerHomePosition;
+
+            var peakPos = homePos + new Vector3(0f, victoryMoveUpAmount, 0f);
+
+            var restScale = playerOriginalScale;
+
+            var peakScale = restScale * victoryScaleMultiplier;
+
+
+
+            // Step 1: lerp up and scale up.
+
+            yield return LerpVictoryPose(
+
+                playerRect,
+
+                playerTransform,
+
+                homePos,
+
+                peakPos,
+
+                restScale,
+
+                peakScale,
+
+                victoryAnimDuration);
+
+
+
+            // Step 2: hold the victory pose.
+
+            yield return new WaitForSeconds(victoryHoldDuration);
+
+
+
+            // Step 3: lerp back to idle position and original scale.
+
+            yield return LerpVictoryPose(
+
+                playerRect,
+
+                playerTransform,
+
+                peakPos,
+
+                homePos,
+
+                peakScale,
+
+                restScale,
+
+                victoryAnimDuration);
+
+
+
+            // Guarantee exact rest pose (avoids float drift from lerp).
+
+            SetRectAnchoredPosition(playerRect, playerHomePosition);
+
+            playerTransform.localScale = playerOriginalScale;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Lerps player rig anchoredPosition and localScale together for the victory pose.
+
+        /// </summary>
+
+        private static IEnumerator LerpVictoryPose(
+
+            RectTransform rect,
+
+            Transform rigTransform,
+
+            Vector3 startPos,
+
+            Vector3 endPos,
+
+            Vector3 startScale,
+
+            Vector3 endScale,
+
+            float duration)
+
+        {
+
+            if (rect == null || rigTransform == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            if (duration <= 0f)
+
+            {
+
+                SetRectAnchoredPosition(rect, endPos);
+
+                rigTransform.localScale = endScale;
+
+                yield break;
+
+            }
+
+
+
+            var elapsed = 0f;
+
+            while (elapsed < duration)
+
+            {
+
+                elapsed += Time.deltaTime;
+
+                var t = Mathf.Clamp01(elapsed / duration);
+
+                SetRectAnchoredPosition(rect, Vector3.Lerp(startPos, endPos, t));
+
+                rigTransform.localScale = Vector3.Lerp(startScale, endScale, t);
+
+                yield return null;
+
+            }
+
+
+
+            SetRectAnchoredPosition(rect, endPos);
+
+            rigTransform.localScale = endScale;
 
         }
 

@@ -112,6 +112,9 @@ namespace Crownsfall.Combat.Events
                 case CombatEventType.PlayerDefeated:
                     return "Fighter defeated!";
 
+                case CombatEventType.BattleWon:
+                    return string.IsNullOrEmpty(combatEvent.message) ? "Victory!" : combatEvent.message;
+
                 case CombatEventType.RunEnded:
                     return $"Final Score: {combatEvent.score}";
 

@@ -440,6 +440,14 @@ MonoBehaviour:
   hitShakeDuration: 0.18
   hitShakeStrength: 8
   hitShakeSteps: 6
+  deathShrinkDuration: 0.35
+  deathFadeDuration: 0.35
+  respawnFadeDuration: 0.25
+  victoryWaveNumber: 3
+  victoryMoveUpAmount: 30
+  victoryScaleMultiplier: 1.08
+  victoryHoldDuration: 0.5
+  victoryAnimDuration: 0.3
   useDebugStartWave: 0
   debugStartWave: 1
   useDebugPlayerHealth: 0
@@ -2418,6 +2426,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   floatingCombatTextPrefab: {fileID: 5016274846084425512, guid: 586f621fa90e749d6894b3658f70ac52, type: 3}
+  targetCanvas: {fileID: 0}
   playerFighterRig: {fileID: 363963699}
   enemyFighterRig: {fileID: 342176006}
 --- !u!1 &1163573823

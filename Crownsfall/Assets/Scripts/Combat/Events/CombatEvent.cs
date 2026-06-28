@@ -17,6 +17,7 @@ namespace Crownsfall.Combat.Events
         PlayerDefeated,
         ScoreChanged,
         BossStarted,
+        BattleWon,
         RunEnded
     }
 
