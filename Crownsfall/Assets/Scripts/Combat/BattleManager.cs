@@ -8,6 +8,8 @@ using Crownsfall.Combat.Events;
 
 using Crownsfall.Combat.Skills;
 
+using Crownsfall.Combat.UI;
+
 using Crownsfall.Core;
 
 using Crownsfall.Services;
@@ -50,6 +52,14 @@ namespace Crownsfall.Combat
         [Header("HUD (Canvas overlay)")]
 
         [SerializeField] private BattleHUD battleHUD;
+
+
+
+        [Header("Wave Banner")]
+
+        [Tooltip("Centered banner shown before each wave's combat begins. Auto-found if left empty.")]
+
+        public WaveBannerUI waveBannerUI;
 
 
 
@@ -478,7 +488,11 @@ namespace Crownsfall.Combat
 
 
 
-            // Wave 1: spawn animation must finish before combat (and before enemy can attack).
+            // Wave 1: banner first, then spawn animation, then combat.
+
+            yield return ShowWaveBannerForCurrentWave();
+
+
 
             yield return PlayEnemySpawnAnimation();
 
@@ -791,6 +805,14 @@ namespace Crownsfall.Combat
 
             UpdateEnemyHealthDisplay();
 
+
+
+            // Banner before the new enemy is displayed or spawned in.
+
+            yield return ShowWaveBannerForCurrentWave();
+
+
+
             DisplayEnemyFighter();
 
 
@@ -806,6 +828,7 @@ namespace Crownsfall.Combat
 
 
             // WaveStarted / BossStarted events (via NotifyWaveStarted) drive the battle log UI.
+
             NotifyWaveStarted();
 
         }
@@ -2646,6 +2669,36 @@ namespace Crownsfall.Combat
 
             }
 
+
+
+            if (waveBannerUI == null)
+
+            {
+
+                waveBannerUI = FindObjectOfType<WaveBannerUI>();
+
+            }
+
+
+
+            if (waveBannerUI != null && waveBannerUI.gameObject.scene != gameObject.scene)
+
+            {
+
+                waveBannerUI = null;
+
+            }
+
+
+
+            if (waveBannerUI == null)
+
+            {
+
+                Debug.LogWarning("WaveBannerUI not found in BattleScene.");
+
+            }
+
         }
 
 
@@ -3024,6 +3077,34 @@ namespace Crownsfall.Combat
                 isCritical = isCritical
 
             });
+
+        }
+
+
+
+        /// <summary>
+
+        /// Shows the wave intro banner for the current wave/enemy. No-op when WaveBannerUI is missing.
+
+        /// </summary>
+
+        private IEnumerator ShowWaveBannerForCurrentWave()
+
+        {
+
+            if (waveBannerUI == null || _enemyFighter == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var isBoss = _currentProgressionProfile != null && _currentProgressionProfile.isBossWave;
+
+            yield return waveBannerUI.ShowWaveBanner(_waveNumber, _enemyFighter.enemyName, isBoss);
 
         }
 

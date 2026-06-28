@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using Crownsfall.Combat;
 using Crownsfall.Combat.UI;
 using TMPro;
@@ -6,6 +7,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Crownsfall.Editor
@@ -17,6 +19,44 @@ namespace Crownsfall.Editor
     public static class BattleSceneSetup
     {
         private const string ScenePath = "Assets/Scenes/BattleScene/BattleScene.unity";
+
+        private static bool IsBattleScene(Scene scene)
+        {
+            return scene.path == ScenePath || scene.name.Contains("Battle");
+        }
+
+        private static bool TryEnsureBattleSceneOpen()
+        {
+            var activeScene = EditorSceneManager.GetActiveScene();
+            if (IsBattleScene(activeScene))
+            {
+                return true;
+            }
+
+            if (!File.Exists(ScenePath))
+            {
+                return false;
+            }
+
+            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            return IsBattleScene(EditorSceneManager.GetActiveScene());
+        }
+
+        private static bool ValidateEditModeMenuItem()
+        {
+            return !EditorApplication.isPlaying;
+        }
+
+        private static bool GuardEditModeOnly(string toolName)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                Debug.LogWarning($"[{toolName}] Cannot run during Play mode. Stop Play mode first.");
+                return false;
+            }
+
+            return true;
+        }
 
         // Match BattleManager defaults so the scene looks correct before Play mode too.
         private static readonly Vector3 PlayerPosition = new Vector3(-0.85f, -1.15f, 0f);
@@ -47,9 +87,20 @@ namespace Crownsfall.Editor
         private const float BottomBarHeight = 240f;
         private const float BottomBarPadding = 32f;
 
+        [MenuItem("Tools/Fighter Tools/Setup Battle Scene", true)]
+        private static bool SetupSceneFromMenuValidate()
+        {
+            return ValidateEditModeMenuItem();
+        }
+
         [MenuItem("Tools/Fighter Tools/Setup Battle Scene")]
         public static void SetupSceneFromMenu()
         {
+            if (!GuardEditModeOnly("Battle Scene Setup"))
+            {
+                return;
+            }
+
             SetupScene(includeUi: false);
             EditorUtility.DisplayDialog(
                 "Battle Scene",
@@ -57,9 +108,20 @@ namespace Crownsfall.Editor
                 "OK");
         }
 
+        [MenuItem("Tools/Fighter Tools/Setup Battle Scene v2", true)]
+        private static bool SetupSceneV2FromMenuValidate()
+        {
+            return ValidateEditModeMenuItem();
+        }
+
         [MenuItem("Tools/Fighter Tools/Setup Battle Scene v2")]
         public static void SetupSceneV2FromMenu()
         {
+            if (!GuardEditModeOnly("Battle Scene Setup"))
+            {
+                return;
+            }
+
             SetupScene(includeUi: true);
             EditorUtility.DisplayDialog(
                 "Battle Scene v2",
@@ -68,9 +130,20 @@ namespace Crownsfall.Editor
                 "OK");
         }
 
+        [MenuItem("Tools/Fighter Tools/Setup Battle Scene Production UI", true)]
+        private static bool SetupSceneProductionUiFromMenuValidate()
+        {
+            return ValidateEditModeMenuItem();
+        }
+
         [MenuItem("Tools/Fighter Tools/Setup Battle Scene Production UI")]
         public static void SetupSceneProductionUiFromMenu()
         {
+            if (!GuardEditModeOnly("Battle Scene Setup"))
+            {
+                return;
+            }
+
             SetupSceneProductionUi();
             EditorUtility.DisplayDialog(
                 "Battle Scene Production UI",
@@ -79,13 +152,71 @@ namespace Crownsfall.Editor
                 "OK");
         }
 
+        [MenuItem("Tools/Fighter Tools/Setup Wave Banner", true)]
+        private static bool SetupWaveBannerFromMenuValidate()
+        {
+            return ValidateEditModeMenuItem();
+        }
+
+        [MenuItem("Tools/Fighter Tools/Setup Wave Banner")]
+        public static void SetupWaveBannerFromMenu()
+        {
+            if (!GuardEditModeOnly("Wave Banner Setup"))
+            {
+                return;
+            }
+
+            if (!TryEnsureBattleSceneOpen())
+            {
+                EditorUtility.DisplayDialog(
+                    "Setup Wave Banner",
+                    "Battle scene not found at:\n" + ScenePath +
+                    "\n\nOpen BattleScene or run Setup Battle Scene Production UI first.",
+                    "OK");
+                return;
+            }
+
+            var canvas = Object.FindObjectOfType<Canvas>();
+            if (canvas == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Setup Wave Banner",
+                    "No Canvas found in BattleScene.",
+                    "OK");
+                return;
+            }
+
+            var banner = EnsureWaveBannerOnCanvas(canvas.GetComponent<RectTransform>());
+
+            EditorSceneManager.SaveOpenScenes();
+            AssetDatabase.SaveAssets();
+
+            EditorUtility.DisplayDialog(
+                "Setup Wave Banner",
+                banner != null
+                    ? "Wave banner added under Canvas and wired to BattleManager."
+                    : "Could not create WaveBannerUI in BattleScene.",
+                "OK");
+        }
+
         /// <summary>
         /// Updates layout on an already-open Battle scene without rebuilding from scratch.
         /// Run this after tweaking layout constants, or use Setup Battle Scene Production UI for a full rebuild.
         /// </summary>
+        [MenuItem("Tools/Fighter Tools/Polish Battle Scene UI", true)]
+        private static bool PolishBattleSceneUiFromMenuValidate()
+        {
+            return ValidateEditModeMenuItem();
+        }
+
         [MenuItem("Tools/Fighter Tools/Polish Battle Scene UI")]
         public static void PolishBattleSceneUiFromMenu()
         {
+            if (!GuardEditModeOnly("Battle Scene UI Polish"))
+            {
+                return;
+            }
+
             if (!File.Exists(ScenePath))
             {
                 EditorUtility.DisplayDialog(
@@ -530,8 +661,12 @@ namespace Crownsfall.Editor
             var battleManager = battleManagerObject.GetComponent<BattleManager>();
 
             var battleHud = CreateProductionBattleCanvas(out var playerRig, out var enemyRig);
+            var canvas = Object.FindObjectOfType<Canvas>();
+            var waveBanner = canvas != null
+                ? CreateWaveBannerPanel(canvas.GetComponent<RectTransform>())
+                : null;
 
-            WireBattleManagerProduction(battleManager, playerRig, enemyRig, battleHud);
+            WireBattleManagerProduction(battleManager, playerRig, enemyRig, battleHud, waveBanner);
             EnsureFloatingCombatTextSpawner(battleManagerObject, playerRig, enemyRig);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -1108,12 +1243,14 @@ namespace Crownsfall.Editor
             BattleManager manager,
             FighterRig playerRig,
             FighterRig enemyRig,
-            BattleHUD battleHud)
+            BattleHUD battleHud,
+            WaveBannerUI waveBanner = null)
         {
             var serializedManager = new SerializedObject(manager);
             serializedManager.FindProperty("playerFighterRig").objectReferenceValue = playerRig;
             serializedManager.FindProperty("enemyFighterRig").objectReferenceValue = enemyRig;
             serializedManager.FindProperty("battleHUD").objectReferenceValue = battleHud;
+            serializedManager.FindProperty("waveBannerUI").objectReferenceValue = waveBanner;
             // Mirror player gear on the enemy so the dummy is visible during UI testing.
             serializedManager.FindProperty("enemyMirrorPlayerAppearance").boolValue = true;
             serializedManager.ApplyModifiedPropertiesWithoutUndo();
@@ -1236,6 +1373,7 @@ namespace Crownsfall.Editor
             }
 
             EnsureGameOverPanelOnBattleHud();
+            EnsureWaveBannerOnOpenScene();
             EnsureFloatingCombatTextSpawnerOnBattleManager();
 
             return true;
@@ -1429,6 +1567,176 @@ namespace Crownsfall.Editor
             }
 
             CreateEnemyBackdrop(enemySlot);
+        }
+
+        private const float WaveBannerWidth = 520f;
+        private const float WaveBannerHeight = 180f;
+        private const float WaveBannerTitleFontSize = 52f;
+        private const float WaveBannerSubtitleFontSize = 32f;
+        private static readonly Color WaveBannerBackdropColor = new Color(0.04f, 0.05f, 0.1f, 0.85f);
+
+        /// <summary>
+        /// Builds WaveBannerPanel under Canvas: centered 520×180 card, CanvasGroup fade, hidden by default.
+        /// </summary>
+        private static WaveBannerUI CreateWaveBannerPanel(RectTransform canvasRect)
+        {
+            var panel = CreateRect("WaveBannerPanel", canvasRect);
+            panel.SetAsLastSibling();
+            ApplyWaveBannerPanelLayout(panel);
+
+            var backdrop = panel.gameObject.AddComponent<Image>();
+            backdrop.color = WaveBannerBackdropColor;
+            backdrop.raycastTarget = false;
+
+            var canvasGroup = panel.gameObject.AddComponent<CanvasGroup>();
+            canvasGroup.alpha = 0f;
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.interactable = false;
+
+            var content = CreateRect("WaveBannerContent", panel);
+            StretchToParent(content, new Vector2(16f, 12f), new Vector2(-16f, -12f));
+
+            var layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(8, 8, 8, 8);
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            var titleText = CreateNamedTmpText(content, "TitleText", "Wave 1", WaveBannerTitleFontSize, FontStyles.Bold);
+            titleText.alignment = TextAlignmentOptions.Center;
+            titleText.color = Color.white;
+            titleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 64f;
+
+            var subtitleText = CreateNamedTmpText(content, "SubtitleText", "Enemy", WaveBannerSubtitleFontSize, FontStyles.Normal);
+            subtitleText.alignment = TextAlignmentOptions.Center;
+            subtitleText.color = Color.white;
+            subtitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
+
+            var banner = panel.gameObject.AddComponent<WaveBannerUI>();
+            WireWaveBannerUI(banner, canvasGroup, content, titleText, subtitleText);
+            banner.ApplyPanelLayout();
+
+            panel.gameObject.SetActive(false);
+            return banner;
+        }
+
+        private static void ApplyWaveBannerPanelLayout(RectTransform panel)
+        {
+            if (panel == null)
+            {
+                return;
+            }
+
+            panel.anchorMin = new Vector2(0.5f, 0.5f);
+            panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.pivot = new Vector2(0.5f, 0.5f);
+            panel.anchoredPosition = Vector2.zero;
+            panel.sizeDelta = new Vector2(WaveBannerWidth, WaveBannerHeight);
+        }
+
+        private static void WireWaveBannerUI(
+            WaveBannerUI banner,
+            CanvasGroup canvasGroup,
+            RectTransform contentRect,
+            TextMeshProUGUI titleText,
+            TextMeshProUGUI subtitleText)
+        {
+            var serialized = new SerializedObject(banner);
+            serialized.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
+            serialized.FindProperty("contentRect").objectReferenceValue = contentRect;
+            serialized.FindProperty("titleText").objectReferenceValue = titleText;
+            serialized.FindProperty("subtitleText").objectReferenceValue = subtitleText;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(banner);
+        }
+
+        /// <summary>
+        /// Adds WaveBannerPanel to BattleScene Canvas when polishing or via Setup Wave Banner menu.
+        /// </summary>
+        private static WaveBannerUI EnsureWaveBannerOnCanvas(RectTransform canvasRect)
+        {
+            if (canvasRect == null)
+            {
+                return null;
+            }
+
+            var scene = canvasRect.gameObject.scene;
+            if (!IsBattleScene(scene))
+            {
+                Debug.LogWarning(
+                    "WaveBanner setup skipped: WaveBannerUI must only be added to BattleScene.");
+                return null;
+            }
+
+            var existingInScene = FindWaveBannersInScene(scene);
+            if (existingInScene.Length > 1)
+            {
+                Debug.LogWarning(
+                    $"Found {existingInScene.Length} WaveBannerUI instances in {scene.name}. " +
+                    "Reusing the first; remove duplicates manually.");
+            }
+
+            if (existingInScene.Length > 0)
+            {
+                var existing = existingInScene[0];
+                existing.transform.SetAsLastSibling();
+                ApplyWaveBannerPanelLayout(existing.transform as RectTransform);
+                existing.ApplyPanelLayout();
+
+                var backdrop = existing.GetComponent<Image>();
+                if (backdrop != null)
+                {
+                    backdrop.color = WaveBannerBackdropColor;
+                }
+
+                WireWaveBannerOnBattleManager(existing);
+                return existing;
+            }
+
+            var banner = CreateWaveBannerPanel(canvasRect);
+            WireWaveBannerOnBattleManager(banner);
+            return banner;
+        }
+
+        private static WaveBannerUI[] FindWaveBannersInScene(Scene scene)
+        {
+            return Object.FindObjectsOfType<WaveBannerUI>()
+                .Where(banner => banner != null && banner.gameObject.scene == scene)
+                .ToArray();
+        }
+
+        private static void EnsureWaveBannerOnOpenScene()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!IsBattleScene(scene))
+            {
+                return;
+            }
+
+            var canvas = Object.FindObjectOfType<Canvas>();
+            if (canvas == null)
+            {
+                return;
+            }
+
+            EnsureWaveBannerOnCanvas(canvas.GetComponent<RectTransform>());
+        }
+
+        private static void WireWaveBannerOnBattleManager(WaveBannerUI waveBanner)
+        {
+            var battleManager = Object.FindObjectOfType<BattleManager>();
+            if (battleManager == null)
+            {
+                return;
+            }
+
+            var serializedManager = new SerializedObject(battleManager);
+            serializedManager.FindProperty("waveBannerUI").objectReferenceValue = waveBanner;
+            serializedManager.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(battleManager);
         }
     }
 }
