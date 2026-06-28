@@ -191,6 +191,8 @@ MonoBehaviour:
   gameOverWaveReachedText: {fileID: 0}
   gameOverEnemiesDefeatedText: {fileID: 0}
   gameOverHighestWaveText: {fileID: 0}
+  gameOverBestScoreText: {fileID: 0}
+  gameOverAllTimeHighestWaveText: {fileID: 0}
   playAgainButton: {fileID: 0}
   characterBuilderButton: {fileID: 0}
 --- !u!1 &48675597
@@ -430,7 +432,7 @@ MonoBehaviour:
   waveTransitionDelay: 1.2
   useDebugStartWave: 0
   debugStartWave: 1
-  useDebugPlayerHealth: 1
+  useDebugPlayerHealth: 0
   debugPlayerHealth: 1
 --- !u!4 &80257748
 Transform:

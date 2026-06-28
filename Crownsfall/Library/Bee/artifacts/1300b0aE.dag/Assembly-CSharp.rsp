@@ -375,6 +375,8 @@
 "Assets/Scripts/Combat/ProgressionProfile.cs"
 "Assets/Scripts/Core/GameManager.cs"
 "Assets/Scripts/Core/GameSession.cs"
+"Assets/Scripts/Services/LocalSaveData.cs"
+"Assets/Scripts/Services/LocalSaveService.cs"
 "Assets/Scripts/UI/CharacterBuilderManager.cs"
 "Assets/Scripts/UI/EquipmentSelector.cs"
 "Assets/Scripts/UI/FighterPreview.cs"

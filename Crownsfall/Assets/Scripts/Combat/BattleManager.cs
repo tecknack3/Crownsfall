@@ -6,6 +6,8 @@ using Crownsfall.Characters;
 
 using Crownsfall.Core;
 
+using Crownsfall.Services;
+
 using Crownsfall.UI;
 
 using UnityEngine;
@@ -568,7 +570,20 @@ namespace Crownsfall.Combat
 
 
 
-            LogCombatMessage($"Fighter defeated! Final Score: {_playerFighter.currentScore}");
+            var finalScore = _playerFighter.currentScore;
+
+            // Wave the player was fighting when they died (not waves cleared after death).
+            var waveReached = _waveNumber;
+
+
+
+            LogCombatMessage($"Fighter defeated! Final Score: {finalScore}");
+
+
+
+            LocalSaveService.SaveRunResult(_playerFighter, finalScore, waveReached);
+
+            var saveData = LocalSaveService.LoadSaveData();
 
 
 
@@ -580,13 +595,19 @@ namespace Crownsfall.Combat
 
                     _playerFighter.fighterName,
 
-                    _playerFighter.currentScore,
+                    finalScore,
 
-                    _waveNumber,
+                    waveReached,
 
                     _enemiesDefeated,
 
-                    _highestWaveReached);
+                    _highestWaveReached,
+
+                    saveData.bestScore,
+
+                    saveData.bestFighterName,
+
+                    saveData.highestWave);
 
             }
 

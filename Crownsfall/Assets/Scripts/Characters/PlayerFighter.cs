@@ -43,26 +43,38 @@ namespace Crownsfall.Characters
         }
 
         // Adds up attack, defense, and speed from all four equipment slots.
+        // Each item's stats are multiplied by its rarity before summing.
         // Null equipment counts as 0. Sets maxHealth and fills currentHealth to full.
         public void CalculateStats()
         {
-            attack = (head?.attack ?? 0)
-                   + (body?.attack ?? 0)
-                   + (weapon?.attack ?? 0)
-                   + (mount?.attack ?? 0);
+            attack = ScaledStat(head, head?.attack ?? 0)
+                   + ScaledStat(body, body?.attack ?? 0)
+                   + ScaledStat(weapon, weapon?.attack ?? 0)
+                   + ScaledStat(mount, mount?.attack ?? 0);
 
-            defense = (head?.defense ?? 0)
-                    + (body?.defense ?? 0)
-                    + (weapon?.defense ?? 0)
-                    + (mount?.defense ?? 0);
+            defense = ScaledStat(head, head?.defense ?? 0)
+                    + ScaledStat(body, body?.defense ?? 0)
+                    + ScaledStat(weapon, weapon?.defense ?? 0)
+                    + ScaledStat(mount, mount?.defense ?? 0);
 
-            speed = (head?.speed ?? 0)
-                  + (body?.speed ?? 0)
-                  + (weapon?.speed ?? 0)
-                  + (mount?.speed ?? 0);
+            speed = ScaledStat(head, head?.speed ?? 0)
+                  + ScaledStat(body, body?.speed ?? 0)
+                  + ScaledStat(weapon, weapon?.speed ?? 0)
+                  + ScaledStat(mount, mount?.speed ?? 0);
 
             maxHealth = 100 + defense * 10;
             currentHealth = maxHealth;
+        }
+
+        // Applies the item's rarity power multiplier to one stat, rounded to an int.
+        private static int ScaledStat(EquipmentItemSO item, int stat)
+        {
+            if (item == null)
+            {
+                return 0;
+            }
+
+            return (int)Math.Round(stat * item.GetPowerMultiplier());
         }
 
         // Restores currentHealth back to full maxHealth.

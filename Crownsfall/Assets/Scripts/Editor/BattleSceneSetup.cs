@@ -504,6 +504,8 @@ namespace Crownsfall.Editor
             public TextMeshProUGUI WaveReachedText;
             public TextMeshProUGUI EnemiesDefeatedText;
             public TextMeshProUGUI HighestWaveText;
+            public TextMeshProUGUI BestScoreText;
+            public TextMeshProUGUI AllTimeHighestWaveText;
             public Button PlayAgainButton;
             public Button CharacterBuilderButton;
         }
@@ -980,6 +982,8 @@ namespace Crownsfall.Editor
             var waveReachedText = CreateGameOverStatLine(card, "GameOverWaveReachedText", "Wave Reached: 0", 30f, FontStyles.Normal);
             var enemiesDefeatedText = CreateGameOverStatLine(card, "GameOverEnemiesDefeatedText", "Enemies Defeated: 0", 30f, FontStyles.Normal);
             var highestWaveText = CreateGameOverStatLine(card, "GameOverHighestWaveText", "Highest Wave: 0", 30f, FontStyles.Normal);
+            var bestScoreText = CreateGameOverStatLine(card, "GameOverBestScoreText", "Best Score: 0", 30f, FontStyles.Normal);
+            var allTimeHighestWaveText = CreateGameOverStatLine(card, "GameOverAllTimeHighestWaveText", "Best Wave: 0", 30f, FontStyles.Normal);
 
             var buttonRow = CreateRect("GameOverButtonRow", card);
             buttonRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 100f;
@@ -1009,6 +1013,8 @@ namespace Crownsfall.Editor
                 WaveReachedText = waveReachedText,
                 EnemiesDefeatedText = enemiesDefeatedText,
                 HighestWaveText = highestWaveText,
+                BestScoreText = bestScoreText,
+                AllTimeHighestWaveText = allTimeHighestWaveText,
                 PlayAgainButton = playAgainButton,
                 CharacterBuilderButton = characterBuilderButton
             };
@@ -1088,6 +1094,8 @@ namespace Crownsfall.Editor
             serialized.FindProperty("gameOverWaveReachedText").objectReferenceValue = gameOverRefs.WaveReachedText;
             serialized.FindProperty("gameOverEnemiesDefeatedText").objectReferenceValue = gameOverRefs.EnemiesDefeatedText;
             serialized.FindProperty("gameOverHighestWaveText").objectReferenceValue = gameOverRefs.HighestWaveText;
+            serialized.FindProperty("gameOverBestScoreText").objectReferenceValue = gameOverRefs.BestScoreText;
+            serialized.FindProperty("gameOverAllTimeHighestWaveText").objectReferenceValue = gameOverRefs.AllTimeHighestWaveText;
             serialized.FindProperty("playAgainButton").objectReferenceValue = gameOverRefs.PlayAgainButton;
             serialized.FindProperty("characterBuilderButton").objectReferenceValue = gameOverRefs.CharacterBuilderButton;
             serialized.ApplyModifiedPropertiesWithoutUndo();
@@ -1233,6 +1241,8 @@ namespace Crownsfall.Editor
                 WaveReachedText = panelRoot.Find("GameOverCard/GameOverWaveReachedText")?.GetComponent<TextMeshProUGUI>(),
                 EnemiesDefeatedText = panelRoot.Find("GameOverCard/GameOverEnemiesDefeatedText")?.GetComponent<TextMeshProUGUI>(),
                 HighestWaveText = panelRoot.Find("GameOverCard/GameOverHighestWaveText")?.GetComponent<TextMeshProUGUI>(),
+                BestScoreText = panelRoot.Find("GameOverCard/GameOverBestScoreText")?.GetComponent<TextMeshProUGUI>(),
+                AllTimeHighestWaveText = panelRoot.Find("GameOverCard/GameOverAllTimeHighestWaveText")?.GetComponent<TextMeshProUGUI>(),
                 PlayAgainButton = panelRoot.Find("GameOverCard/GameOverButtonRow/PlayAgainButton")?.GetComponent<Button>(),
                 CharacterBuilderButton = panelRoot.Find("GameOverCard/GameOverButtonRow/CharacterBuilderButton")?.GetComponent<Button>()
             };
@@ -1248,6 +1258,8 @@ namespace Crownsfall.Editor
             serialized.FindProperty("gameOverWaveReachedText").objectReferenceValue = gameOverRefs.WaveReachedText;
             serialized.FindProperty("gameOverEnemiesDefeatedText").objectReferenceValue = gameOverRefs.EnemiesDefeatedText;
             serialized.FindProperty("gameOverHighestWaveText").objectReferenceValue = gameOverRefs.HighestWaveText;
+            serialized.FindProperty("gameOverBestScoreText").objectReferenceValue = gameOverRefs.BestScoreText;
+            serialized.FindProperty("gameOverAllTimeHighestWaveText").objectReferenceValue = gameOverRefs.AllTimeHighestWaveText;
             serialized.FindProperty("playAgainButton").objectReferenceValue = gameOverRefs.PlayAgainButton;
             serialized.FindProperty("characterBuilderButton").objectReferenceValue = gameOverRefs.CharacterBuilderButton;
             serialized.ApplyModifiedPropertiesWithoutUndo();

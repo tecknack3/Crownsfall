@@ -572,7 +572,7 @@ namespace Crownsfall.UI
         }
 
         /// <summary>
-        /// Shows the item name, or "None" when nothing is available.
+        /// Shows the item name and rarity on two lines, or "None" when nothing is available.
         /// </summary>
         private static void UpdateNameText(TMP_Text nameText, EquipmentItemSO item)
         {
@@ -581,7 +581,14 @@ namespace Crownsfall.UI
                 return;
             }
 
-            nameText.text = item != null ? item.itemName : "None";
+            if (item == null)
+            {
+                nameText.text = "None";
+                return;
+            }
+
+            var rarityHex = ColorUtility.ToHtmlStringRGB(item.GetRarityColor());
+            nameText.text = $"{item.itemName}\n<color=#{rarityHex}>{item.GetRarityDisplayName()}</color>";
         }
 
         /// <summary>

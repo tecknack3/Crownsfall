@@ -47,6 +47,10 @@ namespace Crownsfall.Combat
         [SerializeField] private TMP_Text gameOverEnemiesDefeatedText;
         [SerializeField] private TMP_Text gameOverHighestWaveText;
 
+        [SerializeField] private TMP_Text gameOverBestScoreText;
+
+        [SerializeField] private TMP_Text gameOverAllTimeHighestWaveText;
+
         [SerializeField] private Button playAgainButton;
         [SerializeField] private Button characterBuilderButton;
 
@@ -212,7 +216,10 @@ namespace Crownsfall.Combat
             int finalScore,
             int waveReached,
             int enemiesDefeated,
-            int highestWaveReached)
+            int highestWaveReached,
+            int bestScore,
+            string bestFighterName,
+            int allTimeHighestWave)
         {
             SetText(gameOverTitleText, "YOU HAVE FALLEN");
             SetText(gameOverFighterNameText, fighterName);
@@ -220,6 +227,12 @@ namespace Crownsfall.Combat
             SetText(gameOverWaveReachedText, $"Wave Reached: {waveReached}");
             SetText(gameOverEnemiesDefeatedText, $"Enemies Defeated: {enemiesDefeated}");
             SetText(gameOverHighestWaveText, $"Highest Wave: {highestWaveReached}");
+
+            var bestScoreLabel = string.IsNullOrEmpty(bestFighterName)
+                ? $"Best Score: {bestScore}"
+                : $"Best Score: {bestScore} ({bestFighterName})";
+            SetText(gameOverBestScoreText, bestScoreLabel);
+            SetText(gameOverAllTimeHighestWaveText, $"Best Wave: {allTimeHighestWave}");
 
             if (gameOverPanel != null)
             {
