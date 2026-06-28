@@ -55,7 +55,16 @@ namespace Crownsfall.Combat
         /// </summary>
         public void SetWave(int wave)
         {
-            SetText(waveText, $"Wave {wave}");
+            SetWave(wave, false);
+        }
+
+        /// <summary>
+        /// Updates the wave label; boss waves show "Wave 10 - BOSS".
+        /// </summary>
+        public void SetWave(int wave, bool isBoss)
+        {
+            var label = isBoss ? $"Wave {wave} - BOSS" : $"Wave {wave}";
+            SetText(waveText, label);
         }
 
         /// <summary>

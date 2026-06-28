@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Crownsfall.Combat
 {
     /// <summary>
-    /// Creates wave enemies with scaled stats, tier names, and equipment picked from lists.
+    /// Creates wave enemies using ProgressionEngine for stats/name and equipment lists for visuals.
     /// BattleManager assigns the equipment lists in the Inspector (drag Head/Body/Weapon/Mount SOs).
     ///
     /// Tip: fill lists from Assets/ScriptableObjects/... or use an Editor "Auto Wire" tool later.
@@ -36,18 +36,26 @@ namespace Crownsfall.Combat
 
         /// <summary>
         /// Builds a fresh enemy for the given endless wave number (starts at 1).
+        /// Stats and rewards come from ProgressionEngine; gear is picked from the modulo lists.
         /// </summary>
         public EnemyFighter GenerateEnemy(int waveNumber)
         {
-            var wave = Mathf.Max(1, waveNumber);
+            var progression = ProgressionEngine.GenerateProgression(waveNumber);
+            var wave = progression.waveNumber;
+
+            var displayName = progression.isBossWave
+                ? "BOSS: " + progression.enemyArchetype
+                : progression.enemyArchetype;
 
             var enemy = new EnemyFighter
             {
-                enemyName = GetEnemyNameForWave(wave),
-                attack = 4 + wave * 2,
-                defense = 2 + Mathf.FloorToInt(wave * 0.75f),
-                speed = 1 + Mathf.FloorToInt(wave * 0.35f),
-                maxHealth = 80 + wave * 25,
+                enemyName = displayName,
+                attack = progression.enemyAttack,
+                defense = progression.enemyDefense,
+                speed = progression.enemySpeed,
+                maxHealth = progression.enemyMaxHealth,
+                scoreReward = progression.scoreReward,
+                rewardText = progression.rewardText,
                 head = PickByWave(_heads, wave),
                 body = PickByWave(_bodies, wave),
                 weapon = PickByWave(_weapons, wave),
@@ -57,39 +65,6 @@ namespace Crownsfall.Combat
 
             enemy.currentHealth = enemy.maxHealth;
             return enemy;
-        }
-
-        /// <summary>
-        /// Tier name by wave band (endless mode gets harder names as waves climb).
-        /// </summary>
-        public static string GetEnemyNameForWave(int waveNumber)
-        {
-            if (waveNumber >= 100)
-            {
-                return "Shadow Emperor";
-            }
-
-            if (waveNumber >= 50)
-            {
-                return "Fire Dragon Rider";
-            }
-
-            if (waveNumber >= 20)
-            {
-                return "Crystal Titan";
-            }
-
-            if (waveNumber >= 10)
-            {
-                return "Bone Knight";
-            }
-
-            if (waveNumber >= 5)
-            {
-                return "Wild Raider";
-            }
-
-            return "Rookie Goblin";
         }
 
         /// <summary>

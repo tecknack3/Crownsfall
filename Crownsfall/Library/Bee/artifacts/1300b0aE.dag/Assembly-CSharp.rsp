@@ -371,6 +371,8 @@
 "Assets/Scripts/Combat/BattleUIController.cs"
 "Assets/Scripts/Combat/EnemyFactory.cs"
 "Assets/Scripts/Combat/FighterRig.cs"
+"Assets/Scripts/Combat/ProgressionEngine.cs"
+"Assets/Scripts/Combat/ProgressionProfile.cs"
 "Assets/Scripts/Core/GameManager.cs"
 "Assets/Scripts/Core/GameSession.cs"
 "Assets/Scripts/UI/CharacterBuilderManager.cs"

@@ -31,6 +31,14 @@ namespace Crownsfall.Characters
         /// <summary>False when currentHealth reaches 0.</summary>
         public bool isAlive = true;
 
+        // --- Progression rewards (set by EnemyFactory from ProgressionEngine) ---
+
+        /// <summary>Score points BattleManager adds when this enemy is defeated.</summary>
+        public int scoreReward;
+
+        /// <summary>Battle log message shown on defeat (e.g. "+1 Score" or boss reward text).</summary>
+        public string rewardText;
+
         /// <summary>
         /// Reduces currentHealth by damage, clamped to 0. Marks the enemy dead at 0 HP.
         /// Same idea as PlayerFighter.TakeDamage.

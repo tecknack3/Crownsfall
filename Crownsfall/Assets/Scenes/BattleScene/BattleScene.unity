@@ -419,6 +419,8 @@ MonoBehaviour:
   battleStartDelay: 1
   attackInterval: 0.8
   waveTransitionDelay: 1.2
+  useDebugStartWave: 1
+  debugStartWave: 10
 --- !u!4 &80257748
 Transform:
   m_ObjectHideFlags: 0
