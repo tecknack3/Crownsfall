@@ -317,15 +317,7 @@ namespace Crownsfall.Combat
 
                     // --- Player turn ---
 
-                    var playerDamage = CalculateDamage(_playerFighter.attack, _enemyFighter.defense);
-
-                    _enemyFighter.TakeDamage(playerDamage);
-
-
-
-                    UpdateEnemyHealthDisplay();
-
-                    LogCombatMessage($"Player dealt {playerDamage} damage!");
+                    ApplyPlayerAttackDamage();
 
 
 
@@ -627,6 +619,104 @@ namespace Crownsfall.Combat
         {
 
             return Mathf.Max(1, attack - defense);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Player attack: base damage, optional Critical Strike from weapon skill, then apply to enemy.
+
+        /// </summary>
+
+        private void ApplyPlayerAttackDamage()
+
+        {
+
+            var damage = CalculateDamage(_playerFighter.attack, _enemyFighter.defense);
+
+            TryApplyCriticalStrike(ref damage, out var wasCritical);
+
+
+
+            _enemyFighter.TakeDamage(damage);
+
+            UpdateEnemyHealthDisplay();
+
+
+
+            if (wasCritical)
+
+            {
+
+                LogCombatMessage("CRITICAL HIT!");
+
+                LogCombatMessage($"Player dealt {damage} damage!");
+
+            }
+
+            else
+
+            {
+
+                LogCombatMessage($"Player dealt {damage} damage.");
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
+        /// If the player's weapon has Critical Strike, roll for a crit and multiply damage on success.
+
+        /// v1 only handles Critical Strike — other skill types are ignored for now.
+
+        /// </summary>
+
+        private void TryApplyCriticalStrike(ref int damage, out bool wasCritical)
+
+        {
+
+            wasCritical = false;
+
+
+
+            // Skill lives on the weapon ScriptableObject (EquipmentItemSO.skill).
+
+            var skill = _playerFighter.weapon?.skill;
+
+            if (skill == null || skill.skillType != SkillType.CriticalStrike)
+
+            {
+
+                return;
+
+            }
+
+
+
+            // Random.value is 0–1. chance is stored as a percent (e.g. 25 = 25% crit chance).
+
+            var roll = Random.value;
+
+            if (roll > skill.chance / 100f)
+
+            {
+
+                return;
+
+            }
+
+
+
+            // Crit landed — value is a multiplier (e.g. 2.0 = double damage).
+
+            damage = Mathf.RoundToInt(damage * skill.value);
+
+            wasCritical = true;
 
         }
 
@@ -1078,9 +1168,9 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Logs equipped skill names at battle start for debugging and future combat hooks.
+        /// Logs equipped skill names at battle start for debugging.
 
-        /// v1 does not apply skill effects — activation will be wired in a later combat pass.
+        /// v1 applies Critical Strike from the weapon; other skills are data-only for now.
 
         /// </summary>
 
