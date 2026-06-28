@@ -25,9 +25,9 @@ MonoBehaviour:
   purchaseCost: 0
   description: 
   skill:
-    skillType: 4
-    skillName: Critical Strike
-    description: '    25% chance to deal double damage.'
-    value: 2
-    chance: 25
-    duration: 0
+    skillType: 7
+    skillName: Burn
+    description: 
+    value: 5
+    chance: 100
+    duration: 3

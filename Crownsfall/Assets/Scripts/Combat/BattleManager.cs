@@ -144,9 +144,17 @@ namespace Crownsfall.Combat
         private EnemyFactory _enemyFactory;
 
         /// <summary>
-        /// Runs equipped item skills (Critical Strike v1) during combat.
+        /// Runs equipped item skills (Critical Strike, Burn, etc.) during combat.
         /// </summary>
         private SkillEngine _skillEngine;
+
+        /// <summary>
+        /// Burn DoT state on the current wave enemy. Reset when a new enemy spawns.
+        /// Ticks at the start of each enemy turn (before the enemy attacks).
+        /// </summary>
+        private bool _enemyIsBurning;
+        private int _enemyBurnDamage;
+        private int _enemyBurnTurnsRemaining;
 
 
 
@@ -368,7 +376,23 @@ namespace Crownsfall.Combat
 
 
 
-                    // --- Enemy turn (only if still alive) ---
+                    // --- Enemy turn: burn DoT ticks first, then enemy attacks if still alive ---
+
+                    ProcessEnemyBurnAtTurnStart();
+
+
+
+                    if (!_enemyFighter.isAlive)
+
+                    {
+
+                        yield return HandleEnemyDefeatedAndAdvanceWave();
+
+                        break;
+
+                    }
+
+
 
                     ApplyEnemyAttackDamage();
 
@@ -471,6 +495,8 @@ namespace Crownsfall.Combat
             _currentProgressionProfile = ProgressionEngine.GenerateProgression(wave);
 
             _enemyFighter = _enemyFactory.GenerateEnemy(wave);
+
+            ResetEnemyBurnState();
 
         }
 
@@ -700,6 +726,16 @@ namespace Crownsfall.Combat
 
 
 
+            if (result.applyBurn)
+
+            {
+
+                ApplyBurnToEnemy(result.burnDamage, result.burnDuration);
+
+            }
+
+
+
             _enemyFighter.TakeDamage(result.modifiedDamage);
 
             UpdateEnemyHealthDisplay();
@@ -716,6 +752,60 @@ namespace Crownsfall.Combat
         }
 
 
+
+        /// <summary>
+        /// Clears burn DoT when a new wave enemy spawns.
+        /// </summary>
+        private void ResetEnemyBurnState()
+        {
+            _enemyIsBurning = false;
+            _enemyBurnDamage = 0;
+            _enemyBurnTurnsRemaining = 0;
+        }
+
+        /// <summary>
+        /// Starts or refreshes burn on the current enemy (called when Burn skill triggers on player attack).
+        /// </summary>
+        private void ApplyBurnToEnemy(int damage, int turnsRemaining)
+        {
+            _enemyIsBurning = true;
+            _enemyBurnDamage = damage;
+            _enemyBurnTurnsRemaining = turnsRemaining;
+        }
+
+        /// <summary>
+        /// DoT tick at the start of the enemy turn — before the enemy can attack.
+        /// Deals burn damage, logs it, then counts down duration. When turns hit 0, burn ends.
+        /// </summary>
+        private void ProcessEnemyBurnAtTurnStart()
+        {
+            if (!_enemyIsBurning || _enemyBurnTurnsRemaining <= 0)
+            {
+                return;
+            }
+
+            _enemyFighter.TakeDamage(_enemyBurnDamage);
+            UpdateEnemyHealthDisplay();
+
+            RaiseCombatEvent(
+                CombatEventType.DamageDealt,
+                $"Burn dealt {_enemyBurnDamage} damage!",
+                sourceName: GetSkillDisplayName(_playerFighter.weapon?.skill),
+                targetName: _enemyFighter.enemyName,
+                amount: _enemyBurnDamage);
+
+            _enemyBurnTurnsRemaining--;
+
+            if (_enemyBurnTurnsRemaining <= 0)
+            {
+                _enemyIsBurning = false;
+                RaiseCombatEvent(
+                    CombatEventType.SkillTriggered,
+                    "Burn faded.",
+                    sourceName: GetSkillDisplayName(_playerFighter.weapon?.skill),
+                    targetName: _enemyFighter.enemyName);
+            }
+        }
 
         /// <summary>
 
@@ -1230,7 +1320,7 @@ namespace Crownsfall.Combat
 
         /// Logs equipped skill names at battle start for debugging.
 
-        /// v1 applies Critical Strike from the weapon; other skills are data-only for now.
+        /// v1 applies Critical Strike and Burn from the weapon; other skills are data-only for now.
 
         /// </summary>
 

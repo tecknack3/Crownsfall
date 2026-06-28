@@ -13,5 +13,14 @@ namespace Crownsfall.Combat.Skills
 
         /// <summary>Optional log line when triggered (e.g. "CRITICAL HIT!"). Can be empty.</summary>
         public string message;
+
+        /// <summary>When true, BattleManager applies burn DoT using burnDamage and burnDuration.</summary>
+        public bool applyBurn;
+
+        /// <summary>Damage dealt to the enemy at the start of each enemy turn while burning.</summary>
+        public int burnDamage;
+
+        /// <summary>How many enemy turns the burn lasts (one tick per enemy turn).</summary>
+        public int burnDuration;
     }
 }

@@ -5,7 +5,7 @@ namespace Crownsfall.Combat.Skills
 {
     /// <summary>
     /// Looks up skill effects by SkillType and runs them during combat.
-    /// v1 registers Critical Strike and Shield; more skills can be added later.
+    /// v1 registers Critical Strike, Shield, and Burn; more skills can be added later.
     /// </summary>
     public class SkillEngine
     {
@@ -19,6 +19,7 @@ namespace Crownsfall.Combat.Skills
         {
             RegisterEffect(new CriticalStrikeSkill());
             RegisterEffect(new ShieldSkill());
+            RegisterEffect(new BurnSkill());
         }
 
         /// <summary>

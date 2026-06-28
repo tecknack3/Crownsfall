@@ -379,6 +379,7 @@
 "Assets/Scripts/Combat/ProgressionEngine.cs"
 "Assets/Scripts/Combat/ProgressionProfile.cs"
 "Assets/Scripts/Combat/Skills/BattleContext.cs"
+"Assets/Scripts/Combat/Skills/BurnSkill.cs"
 "Assets/Scripts/Combat/Skills/CriticalStrikeSkill.cs"
 "Assets/Scripts/Combat/Skills/ISkillEffect.cs"
 "Assets/Scripts/Combat/Skills/ShieldSkill.cs"

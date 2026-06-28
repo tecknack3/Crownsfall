@@ -312,8 +312,8 @@
     <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/Views/Properties/PropertiesRefreshNotifier.cs" />
     <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/CodeEditor/Rendering/HeightTree.cs" />
     <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/AssetsUtils/Processor/AssetsProcessor.cs" />
-    <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/UI/OverlayProgress.cs" />
     <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/CodeEditor/Rendering/VisualYPosition.cs" />
+    <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/UI/OverlayProgress.cs" />
     <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/Developer/GenericProgress.cs" />
     <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/Views/BranchExplorer/Drawing/Shapes/BranchShape.cs" />
     <Compile Include="Library/PackageCache/com.unity.collab-proxy@2.12.4/Editor/UI/DockEditorWindow.cs" />
