@@ -121,6 +121,32 @@ namespace Crownsfall.Combat
 
 
 
+        [Header("Combat Animation")]
+
+        [Tooltip("How long the attacker slides toward the opponent before holding at the strike point.")]
+
+        public float attackMoveDuration = 0.25f;
+
+
+
+        [Tooltip("Brief pause at the end of the lunge before the attacker returns home.")]
+
+        public float attackHoldDuration = 0.08f;
+
+
+
+        [Tooltip("How long the attacker takes to slide back to their starting position.")]
+
+        public float attackReturnDuration = 0.25f;
+
+
+
+        [Tooltip("How far toward the target the attacker moves (0.35 = 35% of the distance between home positions).")]
+
+        public float attackDistancePercent = 0.35f;
+
+
+
         [Header("Debug (Editor Testing Only)")]
 
         [Tooltip("Editor testing only for boss waves. Should be disabled before release.")]
@@ -227,6 +253,26 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
+        /// UI anchoredPosition of the player rig when combat begins (rest position after each attack).
+
+        /// </summary>
+
+        private Vector3 playerHomePosition;
+
+
+
+        /// <summary>
+
+        /// UI anchoredPosition of the enemy rig when combat begins (rest position after each attack).
+
+        /// </summary>
+
+        private Vector3 enemyHomePosition;
+
+
+
+        /// <summary>
+
         /// Runs when the battle scene starts. Builds fighters, displays rigs, fills HUD,
 
         /// then schedules auto-combat after a short delay.
@@ -265,6 +311,8 @@ namespace Crownsfall.Combat
 
 
             DisplayFighters();
+
+            CaptureFighterHomePositions();
 
             PopulateBattleUI();
 
@@ -364,9 +412,9 @@ namespace Crownsfall.Combat
 
                 {
 
-                    // --- Player turn ---
+                    // --- Player turn: lunge toward enemy, then apply damage ---
 
-                    ApplyPlayerAttackDamage();
+                    yield return PerformPlayerAttackWithAnimation();
 
 
 
@@ -417,7 +465,7 @@ namespace Crownsfall.Combat
 
 
 
-                    ApplyEnemyAttackDamage();
+                    yield return PerformEnemyAttackWithAnimation();
 
 
 
@@ -611,6 +659,8 @@ namespace Crownsfall.Combat
 
             DisplayEnemyFighter();
 
+            CaptureEnemyHomePosition();
+
 
 
             // WaveStarted / BossStarted events (via NotifyWaveStarted) drive the battle log UI.
@@ -688,6 +738,288 @@ namespace Crownsfall.Combat
                     saveData.highestWave);
 
             }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Saves each fighter rig's current UI position as its home/rest spot for attack animations.
+
+        /// Called after rigs are displayed at battle start and when a new wave enemy appears.
+
+        /// </summary>
+
+        private void CaptureFighterHomePositions()
+
+        {
+
+            CapturePlayerHomePosition();
+
+            CaptureEnemyHomePosition();
+
+        }
+
+
+
+        /// <summary>
+
+        /// Stores the player rig's anchoredPosition so attacks can lunge out and return here.
+
+        /// </summary>
+
+        private void CapturePlayerHomePosition()
+
+        {
+
+            var playerRect = GetRigRectTransform(playerFighterRig);
+
+            if (playerRect == null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            playerHomePosition = RectAnchoredToVector3(playerRect);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Stores the enemy rig's anchoredPosition so attacks can lunge out and return here.
+
+        /// </summary>
+
+        private void CaptureEnemyHomePosition()
+
+        {
+
+            var enemyRect = GetRigRectTransform(enemyFighterRig);
+
+            if (enemyRect == null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            enemyHomePosition = RectAnchoredToVector3(enemyRect);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Player turn wrapper: play the lunge animation first, then run existing damage logic.
+
+        /// </summary>
+
+        private IEnumerator PerformPlayerAttackWithAnimation()
+
+        {
+
+            yield return AnimateAttackLunge(playerFighterRig, playerHomePosition, enemyHomePosition);
+
+            ApplyPlayerAttackDamage();
+
+        }
+
+
+
+        /// <summary>
+
+        /// Enemy turn wrapper: play the lunge animation first, then run existing damage logic.
+
+        /// </summary>
+
+        private IEnumerator PerformEnemyAttackWithAnimation()
+
+        {
+
+            yield return AnimateAttackLunge(enemyFighterRig, enemyHomePosition, playerHomePosition);
+
+            ApplyEnemyAttackDamage();
+
+        }
+
+
+
+        /// <summary>
+
+        /// Slides one UI fighter rig toward the opponent, holds briefly, then returns home.
+
+        /// Uses Vector3.Lerp on RectTransform.anchoredPosition (x/y only). Skips instantly if rig is missing.
+
+        /// </summary>
+
+        private IEnumerator AnimateAttackLunge(FighterRig attackerRig, Vector3 home, Vector3 targetHome)
+
+        {
+
+            var attackerRect = GetRigRectTransform(attackerRig);
+
+            if (attackerRect == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            // Strike point = partway between attacker home and opponent home (e.g. 35% of the gap).
+
+            var attackPos = Vector3.Lerp(home, targetHome, attackDistancePercent);
+
+
+
+            // Step 1: lunge forward.
+
+            yield return LerpRectAnchoredPosition(attackerRect, home, attackPos, attackMoveDuration);
+
+
+
+            // Step 2: hold at the strike point so the hit reads clearly on screen.
+
+            yield return new WaitForSeconds(attackHoldDuration);
+
+
+
+            // Step 3: slide back to the stored home position.
+
+            yield return LerpRectAnchoredPosition(attackerRect, attackPos, home, attackReturnDuration);
+
+
+
+            // Guarantee exact rest position (avoids float drift from lerp).
+
+            SetRectAnchoredPosition(attackerRect, home);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Smoothly moves a UI rig's anchoredPosition from start to end over duration seconds.
+
+        /// </summary>
+
+        private static IEnumerator LerpRectAnchoredPosition(
+
+            RectTransform rect,
+
+            Vector3 start,
+
+            Vector3 end,
+
+            float duration)
+
+        {
+
+            if (rect == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            if (duration <= 0f)
+
+            {
+
+                SetRectAnchoredPosition(rect, end);
+
+                yield break;
+
+            }
+
+
+
+            var elapsed = 0f;
+
+            while (elapsed < duration)
+
+            {
+
+                elapsed += Time.deltaTime;
+
+                var t = Mathf.Clamp01(elapsed / duration);
+
+                SetRectAnchoredPosition(rect, Vector3.Lerp(start, end, t));
+
+                yield return null;
+
+            }
+
+
+
+            SetRectAnchoredPosition(rect, end);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Returns the root RectTransform on a FighterRig (UI canvas rigs use anchoredPosition).
+
+        /// </summary>
+
+        private static RectTransform GetRigRectTransform(FighterRig rig)
+
+        {
+
+            return rig != null ? rig.transform as RectTransform : null;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Reads anchoredPosition as Vector3 (z is always 0 for UI rigs).
+
+        /// </summary>
+
+        private static Vector3 RectAnchoredToVector3(RectTransform rect)
+
+        {
+
+            var anchored = rect.anchoredPosition;
+
+            return new Vector3(anchored.x, anchored.y, 0f);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Writes x/y from a Vector3 into RectTransform.anchoredPosition.
+
+        /// </summary>
+
+        private static void SetRectAnchoredPosition(RectTransform rect, Vector3 position)
+
+        {
+
+            rect.anchoredPosition = new Vector2(position.x, position.y);
 
         }
 
