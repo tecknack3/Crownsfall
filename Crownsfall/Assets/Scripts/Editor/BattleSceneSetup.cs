@@ -1605,7 +1605,7 @@ namespace Crownsfall.Editor
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            var titleText = CreateNamedTmpText(content, "TitleText", "Wave 1", WaveBannerTitleFontSize, FontStyles.Bold);
+            var titleText = CreateNamedTmpText(content, "TitleText", "WAVE 1", WaveBannerTitleFontSize, FontStyles.Bold);
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.color = Color.white;
             titleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 64f;

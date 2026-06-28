@@ -513,8 +513,8 @@ MonoBehaviour:
   victoryScaleMultiplier: 1.08
   victoryHoldDuration: 0.5
   victoryAnimDuration: 0.3
-  useDebugStartWave: 0
-  debugStartWave: 1
+  useDebugStartWave: 1
+  debugStartWave: 10
   useDebugPlayerHealth: 0
   debugPlayerHealth: 1
 --- !u!4 &80257748
