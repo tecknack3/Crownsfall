@@ -147,6 +147,24 @@ namespace Crownsfall.Combat
 
 
 
+        [Tooltip("Total time the defender shakes left/right after taking attack damage.")]
+
+        public float hitShakeDuration = 0.18f;
+
+
+
+        [Tooltip("Horizontal offset (pixels) applied each shake step on the defender rig.")]
+
+        public float hitShakeStrength = 8f;
+
+
+
+        [Tooltip("Number of left/right wobble steps during a hit reaction.")]
+
+        public int hitShakeSteps = 6;
+
+
+
         [Header("Debug (Editor Testing Only)")]
 
         [Tooltip("Editor testing only for boss waves. Should be disabled before release.")]
@@ -833,6 +851,10 @@ namespace Crownsfall.Combat
 
             ApplyPlayerAttackDamage();
 
+            // Defender reacts after damage is applied (not during the attacker's lunge).
+
+            yield return ShakeHitReaction(GetRigTransform(enemyFighterRig));
+
         }
 
 
@@ -850,6 +872,10 @@ namespace Crownsfall.Combat
             yield return AnimateAttackLunge(enemyFighterRig, enemyHomePosition, playerHomePosition);
 
             ApplyEnemyAttackDamage();
+
+            // Player rig shakes after enemy attack damage lands.
+
+            yield return ShakeHitReaction(GetRigTransform(playerFighterRig));
 
         }
 
@@ -906,6 +932,76 @@ namespace Crownsfall.Combat
             // Guarantee exact rest position (avoids float drift from lerp).
 
             SetRectAnchoredPosition(attackerRect, home);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Brief left/right wobble on the defender after attack damage.
+
+        /// Uses localPosition (not anchoredPosition) so the shake does not fight the lunge home positions.
+
+        /// DoT ticks (burn/poison) do not call this — only direct attack hits.
+
+        /// </summary>
+
+        private IEnumerator ShakeHitReaction(Transform target)
+
+        {
+
+            if (target == null || hitShakeSteps <= 0 || hitShakeDuration <= 0f)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            // Remember rest spot so we can snap back when the shake finishes.
+
+            var originalLocal = target.localPosition;
+
+            var stepDuration = hitShakeDuration / hitShakeSteps;
+
+
+
+            for (var i = 0; i < hitShakeSteps; i++)
+
+            {
+
+                // Alternate left (+X) and right (-X) for a quick hit-recoil feel.
+
+                var xOffset = (i % 2 == 0) ? hitShakeStrength : -hitShakeStrength;
+
+                target.localPosition = originalLocal + new Vector3(xOffset, 0f, 0f);
+
+                yield return new WaitForSeconds(stepDuration);
+
+            }
+
+
+
+            target.localPosition = originalLocal;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Returns the root Transform on a FighterRig (used for hit-reaction localPosition shake).
+
+        /// </summary>
+
+        private static Transform GetRigTransform(FighterRig rig)
+
+        {
+
+            return rig != null ? rig.transform : null;
 
         }
 
