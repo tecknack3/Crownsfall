@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 using Crownsfall.Characters;
 
+using Crownsfall.Combat.Skills;
+
 using Crownsfall.Core;
 
 using Crownsfall.Services;
@@ -136,6 +138,11 @@ namespace Crownsfall.Combat
 
         private EnemyFactory _enemyFactory;
 
+        /// <summary>
+        /// Runs equipped item skills (Critical Strike v1) during combat.
+        /// </summary>
+        private SkillEngine _skillEngine;
+
 
 
         /// <summary>
@@ -206,7 +213,7 @@ namespace Crownsfall.Combat
 
             _enemyFactory = new EnemyFactory(enemyHeads, enemyBodies, enemyWeapons, enemyMounts);
 
-
+            _skillEngine = new SkillEngine();
 
             _playerFighter = BuildPlayerFighter();
 
@@ -626,7 +633,7 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Player attack: base damage, optional Critical Strike from weapon skill, then apply to enemy.
+        /// Player attack: base damage, weapon skill via SkillEngine, then apply to enemy.
 
         /// </summary>
 
@@ -634,25 +641,29 @@ namespace Crownsfall.Combat
 
         {
 
-            var damage = CalculateDamage(_playerFighter.attack, _enemyFighter.defense);
+            var baseDamage = CalculateDamage(_playerFighter.attack, _enemyFighter.defense);
 
-            TryApplyCriticalStrike(ref damage, out var wasCritical);
+            var context = CreateBattleContext();
+
+            var skill = _playerFighter.weapon?.skill;
+
+            var result = _skillEngine.ApplyPlayerAttackSkills(baseDamage, skill, context);
 
 
 
-            _enemyFighter.TakeDamage(damage);
+            _enemyFighter.TakeDamage(result.modifiedDamage);
 
             UpdateEnemyHealthDisplay();
 
 
 
-            if (wasCritical)
+            if (result.wasTriggered && !string.IsNullOrEmpty(result.message))
 
             {
 
-                LogCombatMessage("CRITICAL HIT!");
+                LogCombatMessage(result.message);
 
-                LogCombatMessage($"Player dealt {damage} damage!");
+                LogCombatMessage($"Player dealt {result.modifiedDamage} damage!");
 
             }
 
@@ -660,7 +671,7 @@ namespace Crownsfall.Combat
 
             {
 
-                LogCombatMessage($"Player dealt {damage} damage.");
+                LogCombatMessage($"Player dealt {result.modifiedDamage} damage.");
 
             }
 
@@ -670,53 +681,29 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// If the player's weapon has Critical Strike, roll for a crit and multiply damage on success.
-
-        /// v1 only handles Critical Strike — other skill types are ignored for now.
+        /// Builds the context object skill effects use to read fighters and write log lines.
 
         /// </summary>
 
-        private void TryApplyCriticalStrike(ref int damage, out bool wasCritical)
+        private BattleContext CreateBattleContext()
 
         {
 
-            wasCritical = false;
-
-
-
-            // Skill lives on the weapon ScriptableObject (EquipmentItemSO.skill).
-
-            var skill = _playerFighter.weapon?.skill;
-
-            if (skill == null || skill.skillType != SkillType.CriticalStrike)
+            return new BattleContext
 
             {
 
-                return;
+                player = _playerFighter,
 
-            }
+                enemy = _enemyFighter,
 
+                currentWave = _waveNumber,
 
+                currentScore = _playerFighter.currentScore,
 
-            // Random.value is 0–1. chance is stored as a percent (e.g. 25 = 25% crit chance).
+                logMessage = LogCombatMessage
 
-            var roll = Random.value;
-
-            if (roll > skill.chance / 100f)
-
-            {
-
-                return;
-
-            }
-
-
-
-            // Crit landed — value is a multiplier (e.g. 2.0 = double damage).
-
-            damage = Mathf.RoundToInt(damage * skill.value);
-
-            wasCritical = true;
+            };
 
         }
 
