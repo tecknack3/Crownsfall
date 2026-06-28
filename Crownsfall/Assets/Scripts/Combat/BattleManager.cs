@@ -225,6 +225,7 @@ namespace Crownsfall.Combat
             PopulateBattleUI();
 
             LogBattleStart();
+            LogPlayerEquippedSkills();
 
 
 
@@ -1070,6 +1071,56 @@ namespace Crownsfall.Combat
                 $"(ATK {_enemyFighter.attack}, DEF {_enemyFighter.defense}, " +
 
                 $"SPD {_enemyFighter.speed}, HP {_enemyFighter.maxHealth})");
+
+        }
+
+
+
+        /// <summary>
+
+        /// Logs equipped skill names at battle start for debugging and future combat hooks.
+
+        /// v1 does not apply skill effects — activation will be wired in a later combat pass.
+
+        /// </summary>
+
+        private void LogPlayerEquippedSkills()
+
+        {
+
+            if (_playerFighter == null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            Debug.Log(
+
+                "Player Skills\n" +
+
+                FormatEquippedSkillLine("Head", _playerFighter.head) + "\n" +
+
+                FormatEquippedSkillLine("Body", _playerFighter.body) + "\n" +
+
+                FormatEquippedSkillLine("Weapon", _playerFighter.weapon) + "\n" +
+
+                FormatEquippedSkillLine("Mount", _playerFighter.mount));
+
+        }
+
+
+
+        private static string FormatEquippedSkillLine(string slotLabel, EquipmentItemSO item)
+
+        {
+
+            var skillName = item != null ? item.GetSkillDisplayName() : "None";
+
+            return $"{slotLabel}: {skillName}";
 
         }
 

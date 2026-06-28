@@ -130,6 +130,47 @@ namespace Crownsfall.Editor
                 $"Mounts Skipped (already had stats) : {mounts.Skipped}");
         }
 
+        /// <summary>
+        /// Ensures every EquipmentItemSO has a skill object defaulting to None.
+        /// Run once after adding the skill field to existing assets.
+        /// </summary>
+        [MenuItem("Tools/Fighter Tools/Initialize Equipment Skills")]
+        public static void InitializeEquipmentSkills()
+        {
+            var initialized = 0;
+            var alreadySet = 0;
+
+            var guids = AssetDatabase.FindAssets("t:EquipmentItemSO");
+            foreach (var guid in guids)
+            {
+                var assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                var asset = AssetDatabase.LoadAssetAtPath<EquipmentItemSO>(assetPath);
+                if (asset == null)
+                {
+                    continue;
+                }
+
+                if (asset.skill == null)
+                {
+                    asset.skill = new EquipmentSkill { skillType = SkillType.None };
+                    EditorUtility.SetDirty(asset);
+                    initialized++;
+                }
+                else
+                {
+                    alreadySet++;
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log(
+                $"[Initialize Equipment Skills]\n" +
+                $"Initialized (was null): {initialized}\n" +
+                $"Already had skill data: {alreadySet}");
+        }
+
         private static ApplyStatsResult ApplyDefaultStatsInFolder<T>(
             string categoryName,
             string soFolder,
@@ -334,6 +375,7 @@ namespace Crownsfall.Editor
                         itemSo.defense = defaultDefense;
                         itemSo.speed = defaultSpeed;
                         itemSo.rarity = EquipmentRarity.Common;
+                        itemSo.skill = new EquipmentSkill { skillType = SkillType.None };
                         result.Created++;
                     }
                     catch (Exception ex)

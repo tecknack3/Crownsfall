@@ -49,6 +49,10 @@ namespace Crownsfall.Characters
         [Header("Description")]
         public string description;
 
+        [Header("Skill")]
+        [Tooltip("v1 data-only — shown in UI and logged at battle start. Combat activation comes later.")]
+        public EquipmentSkill skill = new EquipmentSkill { skillType = SkillType.None };
+
         // Returns the rarity name for UI labels (e.g. "Rare").
         public string GetRarityDisplayName()
         {
@@ -71,6 +75,22 @@ namespace Crownsfall.Characters
                 default:
                     return new Color(0.6f, 0.6f, 0.6f);
             }
+        }
+
+        // Returns the skill label for UI and debug logs (e.g. "Shield" or "None").
+        public string GetSkillDisplayName()
+        {
+            if (skill == null || skill.skillType == SkillType.None)
+            {
+                return "None";
+            }
+
+            if (!string.IsNullOrEmpty(skill.skillName))
+            {
+                return skill.skillName;
+            }
+
+            return skill.skillType.ToString();
         }
 
         // Higher rarity boosts how much this item's stats count in battle.

@@ -361,6 +361,7 @@
 "Assets/Scripts/Characters/BodySO.cs"
 "Assets/Scripts/Characters/EnemyFighter.cs"
 "Assets/Scripts/Characters/EquipmentItemSO.cs"
+"Assets/Scripts/Characters/EquipmentSkill.cs"
 "Assets/Scripts/Characters/HeadSO.cs"
 "Assets/Scripts/Characters/MountSO.cs"
 "Assets/Scripts/Characters/PlayerFighter.cs"

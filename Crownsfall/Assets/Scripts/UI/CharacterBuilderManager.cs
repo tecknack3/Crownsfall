@@ -112,6 +112,9 @@ namespace Crownsfall.UI
         [Tooltip("Optional. Shows Head/Body/Weapon/Mount rarity on the fighter card.")]
         public TMP_Text cardPowerSummaryText;
 
+        [Tooltip("Optional. Shows Head/Body/Weapon/Mount skill names on the fighter card.")]
+        public TMP_Text cardSkillsSummaryText;
+
         public Button startBattleButton;
         public Button backEditButton;
 
@@ -471,6 +474,7 @@ namespace Crownsfall.UI
             }
 
             UpdateFighterCardPowerSummary(fighter);
+            UpdateFighterCardSkillsSummary(fighter);
 
             if (fighterCardPanel != null)
             {
@@ -615,7 +619,28 @@ namespace Crownsfall.UI
             }
 
             var rarityHex = ColorUtility.ToHtmlStringRGB(item.GetRarityColor());
-            nameText.text = $"{item.itemName}\n<color=#{rarityHex}>{item.GetRarityDisplayName()}</color>";
+            nameText.text =
+                $"{item.itemName}\n" +
+                $"<color=#{rarityHex}>{item.GetRarityDisplayName()}</color>\n" +
+                $"Skill:\n{item.GetSkillDisplayName()}";
+        }
+
+        /// <summary>
+        /// Fills the fighter card skills summary with each equipment slot's skill name.
+        /// </summary>
+        private void UpdateFighterCardSkillsSummary(PlayerFighter fighter)
+        {
+            if (cardSkillsSummaryText == null || fighter == null)
+            {
+                return;
+            }
+
+            cardSkillsSummaryText.text =
+                "Skills\n" +
+                FormatSlotSkillLine("Head", fighter.head) + "\n" +
+                FormatSlotSkillLine("Body", fighter.body) + "\n" +
+                FormatSlotSkillLine("Weapon", fighter.weapon) + "\n" +
+                FormatSlotSkillLine("Mount", fighter.mount);
         }
 
         /// <summary>
@@ -630,6 +655,15 @@ namespace Crownsfall.UI
 
             var rarityHex = ColorUtility.ToHtmlStringRGB(item.GetRarityColor());
             return $"{slotLabel}: <color=#{rarityHex}>{item.GetRarityDisplayName()}</color>";
+        }
+
+        /// <summary>
+        /// One line for the fighter card skills block: "Head: Shield" or "Head: None".
+        /// </summary>
+        private static string FormatSlotSkillLine(string slotLabel, EquipmentItemSO item)
+        {
+            var skillName = item != null ? item.GetSkillDisplayName() : "None";
+            return $"{slotLabel}: {skillName}";
         }
 
         /// <summary>

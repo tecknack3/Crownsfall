@@ -131,6 +131,66 @@ namespace Crownsfall.Editor
                 "OK");
         }
 
+        /// <summary>
+        /// Adds SkillsSummaryText under an existing FighterCardPanel/Content if it is missing.
+        /// </summary>
+        [MenuItem("Tools/Fighter Tools/Add Skills Summary To Fighter Card")]
+        public static void AddSkillsSummaryToExistingPanelFromMenu()
+        {
+            if (!TryEnsureCharacterBuilderScene())
+            {
+                return;
+            }
+
+            var mainLayout = FindMainLayout();
+            if (mainLayout == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Skills Summary",
+                    "Could not find Canvas/MainLayout in the active scene.",
+                    "OK");
+                return;
+            }
+
+            var content = mainLayout.Find(PanelName + "/Content");
+            if (content == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Skills Summary",
+                    PanelName + " not found.\n\nRun Add Fighter Card Panel first.",
+                    "OK");
+                return;
+            }
+
+            var existing = content.Find("SkillsSummaryText");
+            if (existing != null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Skills Summary",
+                    "SkillsSummaryText already exists on the Fighter Card.",
+                    "OK");
+                return;
+            }
+
+            CreateSkillsSummaryText(content.GetComponent<RectTransform>());
+
+            // Place after power summary, before stats panel.
+            var summary = content.Find("SkillsSummaryText");
+            var powerSummary = content.Find("PowerSummaryText");
+            if (summary != null && powerSummary != null)
+            {
+                summary.SetSiblingIndex(powerSummary.GetSiblingIndex() + 1);
+            }
+
+            MarkSceneDirtyAndSave();
+
+            EditorUtility.DisplayDialog(
+                "Skills Summary",
+                "SkillsSummaryText added under FighterCardPanel/Content.\n\n" +
+                "Run Tools → Fighter Tools → Auto Wire Character Builder to wire the reference.",
+                "OK");
+        }
+
         private static bool TryEnsureCharacterBuilderScene()
         {
             var activeScene = EditorSceneManager.GetActiveScene();
@@ -193,6 +253,7 @@ namespace Crownsfall.Editor
             CreateCardPreviewArea(content);
             CreateFighterNameText(content);
             CreatePowerSummaryText(content);
+            CreateSkillsSummaryText(content);
             CreateStatTexts(content);
             CreateActionButtons(content);
 
@@ -257,6 +318,18 @@ namespace Crownsfall.Editor
             summary.alignment = TextAlignmentOptions.Center;
             summary.richText = true;
             summary.gameObject.AddComponent<LayoutElement>().preferredHeight = 140f;
+        }
+
+        private static void CreateSkillsSummaryText(RectTransform parent)
+        {
+            var summary = CreateTmpText(
+                "SkillsSummaryText",
+                parent,
+                "Skills\nHead: None\nBody: None\nWeapon: None\nMount: None",
+                28,
+                FontStyles.Normal);
+            summary.alignment = TextAlignmentOptions.Center;
+            summary.gameObject.AddComponent<LayoutElement>().preferredHeight = 160f;
         }
 
         private static void CreateStatTexts(RectTransform parent)
