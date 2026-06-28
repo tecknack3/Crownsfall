@@ -4,11 +4,11 @@ using UnityEngine;
 namespace Crownsfall.Combat.Events
 {
     /// <summary>
-    /// Listens to CombatEventBus and writes human-readable lines to the BattleHUD log.
+    /// Primary source for on-screen battle log lines. Listens to CombatEventBus and appends
+    /// formatted text to BattleHUD.
     ///
-    /// Why this exists: BattleManager no longer needs to know about UI text fields.
-    /// It raises events; this component (and others later) decide how to show them.
-    /// BattleManager still has its own log calls for now — this is additive, not a replacement.
+    /// BattleManager raises combat events only — it does not write duplicate log lines to the HUD.
+    /// Debug output for development lives in Debug.Log / CombatEventLogger instead.
     /// </summary>
     public class CombatLogUIListener : MonoBehaviour
     {
@@ -80,6 +80,7 @@ namespace Crownsfall.Combat.Events
                     return combatEvent.message;
 
                 case CombatEventType.DamageDealt:
+                    // BattleManager sets message with "!" when a skill also fired on this hit.
                     if (!string.IsNullOrEmpty(combatEvent.message))
                     {
                         return combatEvent.message;
@@ -88,12 +89,13 @@ namespace Crownsfall.Combat.Events
                     return FormatDamageDealt(combatEvent);
 
                 case CombatEventType.EnemyDefeated:
+                    // e.g. "Goblin Scout defeated!"
                     if (!string.IsNullOrEmpty(combatEvent.message))
                     {
                         return combatEvent.message;
                     }
 
-                    return "Enemy defeated! Score +1";
+                    return "Enemy defeated!";
 
                 case CombatEventType.ScoreChanged:
                     // Only show when BattleManager attached a reward message (e.g. "+1 Score").

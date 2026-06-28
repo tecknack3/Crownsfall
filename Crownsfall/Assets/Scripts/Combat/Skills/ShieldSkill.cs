@@ -35,11 +35,16 @@ namespace Crownsfall.Combat.Skills
             var modifiedDamage = Mathf.Max(1, Mathf.RoundToInt(rawModified));
             var blockedAmount = baseDamage - modifiedDamage;
 
+            // When the 1-damage floor prevents blocking, still show that shield absorbed the hit.
+            var message = blockedAmount <= 0
+                ? "SHIELD ABSORBED THE HIT!"
+                : $"SHIELD BLOCKED {blockedAmount} damage!";
+
             return new SkillResult
             {
                 modifiedDamage = modifiedDamage,
                 wasTriggered = true,
-                message = $"SHIELD BLOCKED {blockedAmount} damage!"
+                message = message
             };
         }
 

@@ -29,7 +29,10 @@ namespace Crownsfall.Combat
     /// shows both fighters on UI FighterRigs, fills the BattleHUD overlay, and runs
 
     /// endless auto-combat waves until the player is defeated.
-
+    ///
+    /// Battle log UI: BattleManager raises CombatEventBus events only. CombatLogUIListener
+    /// turns those events into HUD lines — do not call battleHUD.AddLogLine here for the
+    /// same moments (BattleStarted, WaveStarted, skills, damage, defeat, score, etc.).
     /// </summary>
 
     public class BattleManager : MonoBehaviour
@@ -280,8 +283,7 @@ namespace Crownsfall.Combat
 
 
 
-            LogCombatMessage("Combat starts!");
-
+            // CombatLogUIListener shows "Battle begins!" from this event — no duplicate HUD log here.
             RaiseCombatEvent(
                 CombatEventType.BattleStarted,
                 "Battle started!",
@@ -510,10 +512,7 @@ namespace Crownsfall.Combat
 
 
 
-            LogCombatMessage(rewardMessage);
-
-
-
+            // ScoreChanged event carries rewardMessage — CombatLogUIListener shows it in the HUD.
             _playerFighter.AddScore(scoreReward);
 
             RaiseCombatEvent(
@@ -562,8 +561,7 @@ namespace Crownsfall.Combat
 
 
 
-            LogCombatMessage($"Wave {_waveNumber} begins!");
-
+            // WaveStarted / BossStarted events (via NotifyWaveStarted) drive the battle log UI.
             NotifyWaveStarted();
 
         }
@@ -593,8 +591,7 @@ namespace Crownsfall.Combat
 
 
 
-            LogCombatMessage($"Fighter defeated! Final Score: {finalScore}");
-
+            // PlayerDefeated + RunEnded events — CombatLogUIListener formats the HUD lines.
             RaiseCombatEvent(
                 CombatEventType.PlayerDefeated,
                 $"Fighter defeated! Final Score: {finalScore}",
@@ -707,32 +704,14 @@ namespace Crownsfall.Combat
 
             UpdateEnemyHealthDisplay();
 
+            var skillTriggered = result.wasTriggered && !string.IsNullOrEmpty(result.message);
+            var damageSuffix = skillTriggered ? "!" : ".";
             RaiseCombatEvent(
                 CombatEventType.DamageDealt,
-                $"Player dealt {result.modifiedDamage} damage.",
+                $"Player dealt {result.modifiedDamage} damage{damageSuffix}",
                 sourceName: _playerFighter.fighterName,
                 targetName: _enemyFighter.enemyName,
                 amount: result.modifiedDamage);
-
-
-
-            if (result.wasTriggered && !string.IsNullOrEmpty(result.message))
-
-            {
-
-                LogCombatMessage(result.message);
-
-                LogCombatMessage($"Player dealt {result.modifiedDamage} damage!");
-
-            }
-
-            else
-
-            {
-
-                LogCombatMessage($"Player dealt {result.modifiedDamage} damage.");
-
-            }
 
         }
 
@@ -785,32 +764,14 @@ namespace Crownsfall.Combat
 
             UpdatePlayerHealthDisplay();
 
+            var skillTriggered = result.wasTriggered && !string.IsNullOrEmpty(result.message);
+            var damageSuffix = skillTriggered ? "!" : ".";
             RaiseCombatEvent(
                 CombatEventType.DamageDealt,
-                $"Enemy dealt {result.modifiedDamage} damage.",
+                $"Enemy dealt {result.modifiedDamage} damage{damageSuffix}",
                 sourceName: _enemyFighter.enemyName,
                 targetName: _playerFighter.fighterName,
                 amount: result.modifiedDamage);
-
-
-
-            if (result.wasTriggered && !string.IsNullOrEmpty(result.message))
-
-            {
-
-                LogCombatMessage(result.message);
-
-                LogCombatMessage($"Enemy dealt {result.modifiedDamage} damage!");
-
-            }
-
-            else
-
-            {
-
-                LogCombatMessage($"Enemy dealt {result.modifiedDamage} damage.");
-
-            }
 
         }
 
@@ -838,7 +799,8 @@ namespace Crownsfall.Combat
 
                 currentScore = _playerFighter.currentScore,
 
-                logMessage = LogCombatMessage
+                // Skills may log debug lines here; HUD text comes from SkillTriggered / DamageDealt events.
+                logMessage = message => Debug.Log(message)
 
             };
 
@@ -927,32 +889,6 @@ namespace Crownsfall.Combat
             battleHUD.SetEnemyHealth(_enemyFighter.currentHealth, _enemyFighter.maxHealth);
 
             battleHUD.SetScore(_playerFighter.currentScore);
-
-        }
-
-
-
-        /// <summary>
-
-        /// Writes a line to the battle log HUD and mirrors it to the Unity Console.
-
-        /// </summary>
-
-        private void LogCombatMessage(string message)
-
-        {
-
-            Debug.Log(message);
-
-
-
-            if (battleHUD != null)
-
-            {
-
-                battleHUD.AddLogLine(message);
-
-            }
 
         }
 
@@ -1220,7 +1156,9 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Fills stat blocks, health bars, wave/score, and the first battle log line.
+        /// Fills stat blocks, health bars, wave/score. Battle log lines come from CombatLogUIListener
+
+        /// when CombatEventBus events fire — do not seed duplicate lines here.
 
         /// </summary>
 
@@ -1245,8 +1183,6 @@ namespace Crownsfall.Combat
             battleHUD.SetScore(0);
 
             battleHUD.ClearLog();
-
-            battleHUD.AddLogLine("Battle begins!");
 
             battleHUD.SetPlayerStats(_playerFighter);
 

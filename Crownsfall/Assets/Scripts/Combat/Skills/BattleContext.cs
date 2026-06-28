@@ -20,7 +20,7 @@ namespace Crownsfall.Combat.Skills
         /// <summary>Player score so far this run.</summary>
         public int currentScore;
 
-        /// <summary>Callback to add a line to the battle log (BattleManager wires LogCombatMessage here).</summary>
+        /// <summary>Optional debug callback for skill effects (Console only — HUD uses CombatEventBus).</summary>
         public System.Action<string> logMessage;
     }
 }
