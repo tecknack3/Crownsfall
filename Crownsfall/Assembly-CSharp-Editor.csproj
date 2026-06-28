@@ -68,6 +68,7 @@
     <Compile Include="Assets/Scripts/Editor/CharacterBuilderFighterCardSetup.cs" />
     <Compile Include="Assets/Scripts/Editor/BodyScriptableObjectGenerator.cs" />
     <Compile Include="Assets/Scripts/Editor/CombatBalanceAssetCreator.cs" />
+    <Compile Include="Assets/Scripts/Editor/FloatingCombatTextSetup.cs" />
     <Compile Include="Assets/Scripts/Editor/CharacterBuilderSceneSetup.cs" />
     <Compile Include="Assets/Scripts/Editor/BattleSceneSetup.cs" />
     <Compile Include="Assets/Scripts/Editor/CharacterBuilderUIGenerator.cs" />

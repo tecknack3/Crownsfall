@@ -429,9 +429,17 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 349af3c9dd68e472ab30439a78fb95f7, type: 2}
   - {fileID: 11400000, guid: 9b85ea98c4f8948a8b706783c0378de7, type: 2}
   enemyTint: {r: 1, g: 0.32, b: 0.32, a: 1}
+  combatBalance: {fileID: 0}
   battleStartDelay: 1
   attackInterval: 0.8
   waveTransitionDelay: 1.2
+  attackMoveDuration: 0.25
+  attackHoldDuration: 0.08
+  attackReturnDuration: 0.25
+  attackDistancePercent: 0.35
+  hitShakeDuration: 0.18
+  hitShakeStrength: 8
+  hitShakeSteps: 6
   useDebugStartWave: 0
   debugStartWave: 1
   useDebugPlayerHealth: 0
@@ -2223,6 +2231,7 @@ RectTransform:
   m_Children:
   - {fileID: 213876405}
   - {fileID: 11011401}
+  - {fileID: 1127361614}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -2364,6 +2373,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1101605571}
   m_CullTransparentMesh: 1
+--- !u!1 &1127361613
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1127361614}
+  - component: {fileID: 1127361615}
+  m_Layer: 0
+  m_Name: FloatingCombatTextSpawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1127361614
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1127361613}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 849411752}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1127361615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1127361613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4d8f2e93c5e4701b2f3a4c5d6e7f819, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  floatingCombatTextPrefab: {fileID: 5016274846084425512, guid: 586f621fa90e749d6894b3658f70ac52, type: 3}
+  playerFighterRig: {fileID: 363963699}
+  enemyFighterRig: {fileID: 342176006}
 --- !u!1 &1163573823
 GameObject:
   m_ObjectHideFlags: 0

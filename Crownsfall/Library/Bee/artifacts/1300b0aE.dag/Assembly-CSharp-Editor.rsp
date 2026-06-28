@@ -392,6 +392,7 @@
 "Assets/Scripts/Editor/EquipmentSpriteAutoAssignWindow.cs"
 "Assets/Scripts/Editor/FighterRigHierarchyBuilder.cs"
 "Assets/Scripts/Editor/FloatingCombatTextPrefabCreator.cs"
+"Assets/Scripts/Editor/FloatingCombatTextSetup.cs"
 "Assets/Scripts/Editor/MissingScriptFinder.cs"
 -langversion:9.0
 /deterministic
