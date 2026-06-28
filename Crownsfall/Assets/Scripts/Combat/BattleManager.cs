@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 using Crownsfall.Characters;
 
+using Crownsfall.Combat.Events;
+
 using Crownsfall.Combat.Skills;
 
 using Crownsfall.Core;
@@ -225,6 +227,8 @@ namespace Crownsfall.Combat
 
             SpawnEnemyForWave(_waveNumber);
 
+            NotifyWaveStarted();
+
 
 
             DisplayFighters();
@@ -277,6 +281,12 @@ namespace Crownsfall.Combat
 
 
             LogCombatMessage("Combat starts!");
+
+            RaiseCombatEvent(
+                CombatEventType.BattleStarted,
+                "Battle started!",
+                sourceName: _playerFighter.fighterName,
+                targetName: _enemyFighter.enemyName);
 
 
 
@@ -492,6 +502,12 @@ namespace Crownsfall.Combat
 
             _enemiesDefeated++;
 
+            RaiseCombatEvent(
+                CombatEventType.EnemyDefeated,
+                $"{_enemyFighter.enemyName} defeated!",
+                sourceName: _playerFighter.fighterName,
+                targetName: _enemyFighter.enemyName);
+
 
 
             LogCombatMessage(rewardMessage);
@@ -499,6 +515,12 @@ namespace Crownsfall.Combat
 
 
             _playerFighter.AddScore(scoreReward);
+
+            RaiseCombatEvent(
+                CombatEventType.ScoreChanged,
+                rewardMessage,
+                amount: scoreReward,
+                score: _playerFighter.currentScore);
 
 
 
@@ -542,6 +564,8 @@ namespace Crownsfall.Combat
 
             LogCombatMessage($"Wave {_waveNumber} begins!");
 
+            NotifyWaveStarted();
+
         }
 
 
@@ -570,6 +594,19 @@ namespace Crownsfall.Combat
 
 
             LogCombatMessage($"Fighter defeated! Final Score: {finalScore}");
+
+            RaiseCombatEvent(
+                CombatEventType.PlayerDefeated,
+                $"Fighter defeated! Final Score: {finalScore}",
+                sourceName: _enemyFighter?.enemyName,
+                targetName: _playerFighter.fighterName,
+                score: finalScore);
+
+            RaiseCombatEvent(
+                CombatEventType.RunEnded,
+                "Run ended.",
+                sourceName: _playerFighter.fighterName,
+                score: finalScore);
 
 
 
@@ -633,6 +670,14 @@ namespace Crownsfall.Combat
 
         {
 
+            RaiseCombatEvent(
+                CombatEventType.PlayerAttack,
+                "Player attacks.",
+                sourceName: _playerFighter.fighterName,
+                targetName: _enemyFighter.enemyName);
+
+
+
             var baseDamage = CalculateDamage(_playerFighter.attack, _enemyFighter.defense);
 
             var context = CreateBattleContext();
@@ -643,9 +688,31 @@ namespace Crownsfall.Combat
 
 
 
+            if (result.wasTriggered && !string.IsNullOrEmpty(result.message))
+
+            {
+
+                RaiseCombatEvent(
+                    CombatEventType.SkillTriggered,
+                    result.message,
+                    sourceName: GetSkillDisplayName(skill),
+                    targetName: _enemyFighter.enemyName,
+                    amount: result.modifiedDamage);
+
+            }
+
+
+
             _enemyFighter.TakeDamage(result.modifiedDamage);
 
             UpdateEnemyHealthDisplay();
+
+            RaiseCombatEvent(
+                CombatEventType.DamageDealt,
+                $"Player dealt {result.modifiedDamage} damage.",
+                sourceName: _playerFighter.fighterName,
+                targetName: _enemyFighter.enemyName,
+                amount: result.modifiedDamage);
 
 
 
@@ -681,6 +748,14 @@ namespace Crownsfall.Combat
 
         {
 
+            RaiseCombatEvent(
+                CombatEventType.EnemyAttack,
+                "Enemy attacks.",
+                sourceName: _enemyFighter.enemyName,
+                targetName: _playerFighter.fighterName);
+
+
+
             var baseDamage = CalculateDamage(_enemyFighter.attack, _playerFighter.defense);
 
             var context = CreateBattleContext();
@@ -691,9 +766,31 @@ namespace Crownsfall.Combat
 
 
 
+            if (result.wasTriggered && !string.IsNullOrEmpty(result.message))
+
+            {
+
+                RaiseCombatEvent(
+                    CombatEventType.SkillTriggered,
+                    result.message,
+                    sourceName: GetSkillDisplayName(skill),
+                    targetName: _playerFighter.fighterName,
+                    amount: result.modifiedDamage);
+
+            }
+
+
+
             _playerFighter.TakeDamage(result.modifiedDamage);
 
             UpdatePlayerHealthDisplay();
+
+            RaiseCombatEvent(
+                CombatEventType.DamageDealt,
+                $"Enemy dealt {result.modifiedDamage} damage.",
+                sourceName: _enemyFighter.enemyName,
+                targetName: _playerFighter.fighterName,
+                amount: result.modifiedDamage);
 
 
 
@@ -1238,6 +1335,120 @@ namespace Crownsfall.Combat
             var skillName = item != null ? item.GetSkillDisplayName() : "None";
 
             return $"{slotLabel}: {skillName}";
+
+        }
+
+
+
+        /// <summary>
+
+        /// Raises a combat event on the shared bus with common battle fields filled in.
+
+        /// </summary>
+
+        private void RaiseCombatEvent(
+
+            CombatEventType type,
+
+            string message,
+
+            string sourceName = null,
+
+            string targetName = null,
+
+            int amount = 0,
+
+            int? waveNumber = null,
+
+            int? score = null,
+
+            bool? isBoss = null)
+
+        {
+
+            CombatEventBus.Raise(new CombatEvent
+
+            {
+
+                eventType = type,
+
+                message = message,
+
+                sourceName = sourceName ?? string.Empty,
+
+                targetName = targetName ?? string.Empty,
+
+                amount = amount,
+
+                waveNumber = waveNumber ?? _waveNumber,
+
+                score = score ?? (_playerFighter?.currentScore ?? 0),
+
+                isBoss = isBoss ?? (_currentProgressionProfile?.isBossWave ?? false)
+
+            });
+
+        }
+
+
+
+        /// <summary>
+
+        /// Fires WaveStarted and BossStarted (when applicable) after a wave enemy is spawned.
+
+        /// </summary>
+
+        private void NotifyWaveStarted()
+
+        {
+
+            var isBoss = _currentProgressionProfile != null && _currentProgressionProfile.isBossWave;
+
+
+
+            RaiseCombatEvent(
+
+                CombatEventType.WaveStarted,
+
+                $"Wave {_waveNumber} begins!",
+
+                isBoss: isBoss);
+
+
+
+            if (isBoss)
+
+            {
+
+                RaiseCombatEvent(
+
+                    CombatEventType.BossStarted,
+
+                    $"Boss wave {_waveNumber}!",
+
+                    isBoss: true);
+
+            }
+
+        }
+
+
+
+        private static string GetSkillDisplayName(EquipmentSkill skill)
+
+        {
+
+            if (skill == null)
+
+            {
+
+                return "Skill";
+
+            }
+
+
+
+            return string.IsNullOrEmpty(skill.skillName) ? skill.skillType.ToString() : skill.skillName;
 
         }
 
