@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8a3c2b1d4e5678901234567890abcde, type: 3}
+  m_Name: CombatBalance
+  m_EditorClassIdentifier: 
+  enemyAttackBase: 4
+  enemyAttackPerWave: 2
+  enemyDefenseBase: 2
+  enemyDefensePerWave: 0.75
+  enemySpeedBase: 1
+  enemySpeedPerWave: 0.35
+  enemyMaxHealthBase: 80
+  enemyMaxHealthPerWave: 25
+  bossWaveInterval: 10
+  bossAttackBonus: 5
+  bossDefenseBonus: 3
+  bossSpeedBonus: 1
+  bossHealthMultiplier: 2
+  scorePerWave: 1
+  bossScoreReward: 5
+  scoreRewardText: +1 Score
+  bossScoreRewardText: Boss defeated! +5 Score
+  criticalDamageMultiplier: 2
+  burnDamage: 5
+  burnDuration: 3
+  poisonDamage: 3
+  poisonDuration: 5
+  shieldBlockPercent: 30
+  lifeStealPercent: 0.25

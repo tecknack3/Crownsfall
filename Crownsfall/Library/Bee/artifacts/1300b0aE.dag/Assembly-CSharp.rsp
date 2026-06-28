@@ -370,6 +370,8 @@
 "Assets/Scripts/Combat/BattleHUD.cs"
 "Assets/Scripts/Combat/BattleManager.cs"
 "Assets/Scripts/Combat/BattleUIController.cs"
+"Assets/Scripts/Combat/CombatBalance.cs"
+"Assets/Scripts/Combat/CombatBalanceSO.cs"
 "Assets/Scripts/Combat/EnemyFactory.cs"
 "Assets/Scripts/Combat/Events/CombatEvent.cs"
 "Assets/Scripts/Combat/Events/CombatEventBus.cs"

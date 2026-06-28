@@ -93,6 +93,14 @@ namespace Crownsfall.Combat
 
 
 
+        [Header("Combat Balance")]
+
+        [Tooltip("Wave scaling, score rewards, and skill template defaults. Create via Tools → Fighter Tools → Create Combat Balance Asset.")]
+
+        [SerializeField] private CombatBalanceSO combatBalance;
+
+
+
         [Header("Combat Timing")]
 
         [Tooltip("Seconds to wait after scene load before the first attack.")]
@@ -230,6 +238,11 @@ namespace Crownsfall.Combat
         {
 
             FindSceneReferencesIfNeeded();
+
+            if (combatBalance != null)
+            {
+                CombatBalance.SetActive(combatBalance);
+            }
 
 
 
@@ -527,13 +540,15 @@ namespace Crownsfall.Combat
 
         {
 
+            var balance = CombatBalance.Active;
+
             var rewardMessage = _enemyFighter != null && !string.IsNullOrEmpty(_enemyFighter.rewardText)
 
                 ? _enemyFighter.rewardText
 
-                : _currentProgressionProfile?.rewardText ?? "+1 Score";
+                : _currentProgressionProfile?.rewardText ?? balance.scoreRewardText;
 
-            var scoreReward = _enemyFighter?.scoreReward ?? _currentProgressionProfile?.scoreReward ?? 1;
+            var scoreReward = _enemyFighter?.scoreReward ?? _currentProgressionProfile?.scoreReward ?? balance.scorePerWave;
 
 
 

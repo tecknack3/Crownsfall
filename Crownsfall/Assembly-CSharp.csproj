@@ -62,6 +62,7 @@
   <ItemGroup>
     <Compile Include="Assets/Scripts/Characters/MountSO.cs" />
     <Compile Include="Assets/Scripts/Combat/Skills/SkillResult.cs" />
+    <Compile Include="Assets/Scripts/Combat/CombatBalance.cs" />
     <Compile Include="Assets/Scripts/Combat/ProgressionEngine.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_TextEventHandler.cs" />
     <Compile Include="Assets/Scripts/Characters/EquipmentItemSO.cs" />
@@ -113,6 +114,7 @@
     <Compile Include="Assets/Scripts/Combat/Events/CombatEvent.cs" />
     <Compile Include="Assets/Scripts/Characters/HeadSO.cs" />
     <Compile Include="Assets/Scripts/Combat/BattleFighterView.cs" />
+    <Compile Include="Assets/Scripts/Combat/CombatBalanceSO.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/SkewTextExample.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/WarpTextExample.cs" />
     <Compile Include="Assets/Scripts/Combat/Skills/SkillEngine.cs" />

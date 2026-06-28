@@ -387,6 +387,7 @@
 "Assets/Scripts/Editor/CharacterBuilderFighterCardSetup.cs"
 "Assets/Scripts/Editor/CharacterBuilderSceneSetup.cs"
 "Assets/Scripts/Editor/CharacterBuilderUIGenerator.cs"
+"Assets/Scripts/Editor/CombatBalanceAssetCreator.cs"
 "Assets/Scripts/Editor/EquipmentImporter.cs"
 "Assets/Scripts/Editor/EquipmentSpriteAutoAssignWindow.cs"
 "Assets/Scripts/Editor/FighterRigHierarchyBuilder.cs"
