@@ -42,8 +42,8 @@ namespace Crownsfall.Combat
         [SerializeField] private Image headImage;
         [SerializeField] private Image crownImage;
 
-        [Header("Future UI Anchors (empty for now)")]
-        [Tooltip("Parent for floating damage text — not used yet.")]
+        [Header("Future UI Anchors")]
+        [Tooltip("Parent for floating damage/heal numbers spawned by FloatingCombatTextSpawner.")]
         [SerializeField] private RectTransform damageAnchor;
 
         [Tooltip("Parent for a health bar attached to this fighter — not used yet (BattleHUD owns bars today).")]
@@ -51,6 +51,12 @@ namespace Crownsfall.Combat
 
         [Tooltip("Parent for a name label above/below the fighter — not used yet.")]
         [SerializeField] private RectTransform nameAnchor;
+
+        /// <summary>
+        /// Empty anchor above the fighter — parent for floating damage/heal numbers.
+        /// Created by Tools → Fighter Tools → Setup Battle Scene Production UI.
+        /// </summary>
+        public RectTransform DamageAnchor => damageAnchor;
 
         [Header("Layer Offsets (anchoredPosition on each anchor, in UI pixels)")]
         [Tooltip("How far the mount sits below the body center.")]

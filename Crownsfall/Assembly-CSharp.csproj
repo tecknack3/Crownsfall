@@ -91,6 +91,7 @@
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_PhoneNumberValidator.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/VertexJitter.cs" />
     <Compile Include="Assets/Scripts/Characters/WeaponSO.cs" />
+    <Compile Include="Assets/Scripts/Combat/UI/FloatingCombatTextSpawner.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_DigitValidator.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_FrameRateCounter.cs" />
     <Compile Include="Assets/Scripts/Core/GameManager.cs" />
@@ -122,6 +123,7 @@
     <Compile Include="Assets/Scripts/Combat/Skills/BurnSkill.cs" />
     <Compile Include="Assets/Scripts/Combat/Skills/PoisonSkill.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/ShaderPropAnimator.cs" />
+    <Compile Include="Assets/Scripts/Combat/UI/FloatingCombatText.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/CameraController.cs" />
     <Compile Include="Assets/Scripts/Characters/BodySO.cs" />
     <Compile Include="Assets/Scripts/UI/FighterPreview.cs" />

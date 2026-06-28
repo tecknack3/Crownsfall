@@ -1,5 +1,6 @@
 using System.IO;
 using Crownsfall.Combat;
+using Crownsfall.Combat.UI;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -531,6 +532,7 @@ namespace Crownsfall.Editor
             var battleHud = CreateProductionBattleCanvas(out var playerRig, out var enemyRig);
 
             WireBattleManagerProduction(battleManager, playerRig, enemyRig, battleHud);
+            EnsureFloatingCombatTextSpawner(battleManagerObject, playerRig, enemyRig);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
@@ -1119,6 +1121,47 @@ namespace Crownsfall.Editor
         }
 
         /// <summary>
+        /// Adds FloatingCombatTextSpawner to BattleManager and wires rigs + prefab for floating numbers.
+        /// </summary>
+        private static void EnsureFloatingCombatTextSpawner(
+            GameObject battleManagerObject,
+            FighterRig playerRig,
+            FighterRig enemyRig)
+        {
+            if (battleManagerObject == null)
+            {
+                return;
+            }
+
+            var spawner = battleManagerObject.GetComponent<FloatingCombatTextSpawner>();
+            if (spawner == null)
+            {
+                spawner = battleManagerObject.AddComponent<FloatingCombatTextSpawner>();
+            }
+
+            var prefab = FloatingCombatTextPrefabCreator.LoadOrCreatePrefab();
+            var serialized = new SerializedObject(spawner);
+            serialized.FindProperty("floatingCombatTextPrefab").objectReferenceValue = prefab;
+            serialized.FindProperty("playerFighterRig").objectReferenceValue = playerRig;
+            serialized.FindProperty("enemyFighterRig").objectReferenceValue = enemyRig;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(spawner);
+        }
+
+        private static void EnsureFloatingCombatTextSpawnerOnBattleManager()
+        {
+            var battleManager = Object.FindObjectOfType<BattleManager>();
+            if (battleManager == null)
+            {
+                return;
+            }
+
+            var playerRig = GameObject.Find("PlayerFighterRig")?.GetComponent<FighterRig>();
+            var enemyRig = GameObject.Find("EnemyFighterRig")?.GetComponent<FighterRig>();
+            EnsureFloatingCombatTextSpawner(battleManager.gameObject, playerRig, enemyRig);
+        }
+
+        /// <summary>
         /// Finds production UI objects in the open scene and applies the latest layout constants.
         /// Returns false when the expected hierarchy is missing.
         /// </summary>
@@ -1198,6 +1241,7 @@ namespace Crownsfall.Editor
             }
 
             EnsureGameOverPanelOnBattleHud();
+            EnsureFloatingCombatTextSpawnerOnBattleManager();
 
             return true;
         }
