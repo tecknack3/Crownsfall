@@ -18,6 +18,8 @@ using Crownsfall.UI;
 
 using UnityEngine;
 
+using UnityEngine.UI;
+
 
 
 namespace Crownsfall.Combat
@@ -187,9 +189,35 @@ namespace Crownsfall.Combat
 
 
 
-        [Tooltip("How long the enemy rig scales/fades in when a new wave spawns (80% scale, 0 alpha → full).")]
+        [Header("Enemy Entrance Animation")]
 
-        public float enemySpawnDuration = 0.35f;
+        [Tooltip("Duration of the normal enemy slide-in entrance (off-screen right → home).")]
+
+        public float normalEntranceDuration = 0.45f;
+
+
+
+        [Tooltip("Duration of the boss slide-in entrance (farther offset, heavier landing).")]
+
+        public float bossEntranceDuration = 0.8f;
+
+
+
+        [Tooltip("How far off-screen (pixels right of home) the normal enemy starts.")]
+
+        public float normalEntranceOffsetX = 250f;
+
+
+
+        [Tooltip("How far off-screen (pixels right of home) the boss starts.")]
+
+        public float bossEntranceOffsetX = 400f;
+
+
+
+        [Tooltip("Optional backdrop Image for the boss red flash. Auto-finds EnemyBackdrop under the enemy slot if empty.")]
+
+        [SerializeField] private Image bossEntranceFlashBackdrop;
 
 
 
@@ -488,13 +516,13 @@ namespace Crownsfall.Combat
 
 
 
-            // Wave 1: banner first, then spawn animation, then combat.
+            // Wave 1: banner first, then entrance animation, then combat.
 
             yield return ShowWaveBannerForCurrentWave();
 
 
 
-            yield return PlayEnemySpawnAnimation();
+            yield return PlayEnemyEntranceAnimation();
 
 
 
@@ -821,9 +849,13 @@ namespace Crownsfall.Combat
 
 
 
-            // Scale/fade in the new enemy before combat resumes (replaces old respawn fade).
+            PrepareEnemySpawnStartState();
 
-            yield return PlayEnemySpawnAnimation();
+
+
+            // Slide/fade in the new enemy before combat resumes.
+
+            yield return PlayEnemyEntranceAnimation();
 
 
 
@@ -1698,9 +1730,9 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Sets the enemy rig to spawn-animation start state (80% scale, invisible).
+        /// Sets the enemy rig to entrance-animation start state (off-screen right, alpha 0, scaled down/up).
 
-        /// Called at battle start so wave 1 waits hidden until PlayEnemySpawnAnimation runs.
+        /// Called at battle start and after each wave so the enemy stays hidden until the entrance runs.
 
         /// </summary>
 
@@ -1709,6 +1741,8 @@ namespace Crownsfall.Combat
         {
 
             var enemyTransform = GetRigTransform(enemyFighterRig);
+
+            var enemyRect = GetRigRectTransform(enemyFighterRig);
 
             var canvasGroup = GetOrAddCanvasGroup(enemyFighterRig != null ? enemyFighterRig.gameObject : null);
 
@@ -1722,7 +1756,15 @@ namespace Crownsfall.Combat
 
 
 
-            enemyTransform.localScale = enemyOriginalScale * 0.8f;
+            var isBoss = IsCurrentWaveBoss();
+
+            var offsetX = isBoss ? bossEntranceOffsetX : normalEntranceOffsetX;
+
+            var startScaleMultiplier = isBoss ? 1.2f : 0.85f;
+
+
+
+            enemyTransform.localScale = enemyOriginalScale * startScaleMultiplier;
 
             if (canvasGroup != null)
 
@@ -1732,23 +1774,53 @@ namespace Crownsfall.Combat
 
             }
 
+
+
+            if (enemyRect != null)
+
+            {
+
+                var startPosition = enemyHomePosition + new Vector3(offsetX, 0f, 0f);
+
+                SetRectAnchoredPosition(enemyRect, startPosition);
+
+            }
+
         }
 
 
 
         /// <summary>
 
-        /// Spawn animation: lerp from 80% scale / 0 alpha to full size over enemySpawnDuration (ease out).
-
-        /// Resets scale and alpha at the start so death state does not carry over. Does not move combat logic.
+        /// True when the active wave profile marks this wave as a boss wave.
 
         /// </summary>
 
-        private IEnumerator PlayEnemySpawnAnimation()
+        private bool IsCurrentWaveBoss()
 
         {
 
-            Debug.Log("Enemy Spawn Animation Started");
+            return _currentProgressionProfile != null && _currentProgressionProfile.isBossWave;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Normal or boss entrance: slide from off-screen right, fade in, scale to home size, landing bounce.
+
+        /// Boss waves use a farther offset, slower timing, heavier bounce, and optional red backdrop flash.
+
+        /// </summary>
+
+        private IEnumerator PlayEnemyEntranceAnimation()
+
+        {
+
+            var isBoss = IsCurrentWaveBoss();
+
+            Debug.Log(isBoss ? "Boss Entrance Animation Started" : "Enemy Entrance Animation Started");
 
 
 
@@ -1764,7 +1836,7 @@ namespace Crownsfall.Combat
 
             {
 
-                Debug.Log("Enemy Spawn Animation Finished");
+                Debug.Log(isBoss ? "Boss Entrance Animation Finished" : "Enemy Entrance Animation Finished");
 
                 yield break;
 
@@ -1772,13 +1844,27 @@ namespace Crownsfall.Combat
 
 
 
-            var startScale = enemyOriginalScale * 0.8f;
+            var duration = isBoss ? bossEntranceDuration : normalEntranceDuration;
+
+            var offsetX = isBoss ? bossEntranceOffsetX : normalEntranceOffsetX;
+
+            var startScaleMultiplier = isBoss ? 1.2f : 0.85f;
+
+            var bounceOvershoot = isBoss ? 1.15f : 1.05f;
+
+
+
+            var startScale = enemyOriginalScale * startScaleMultiplier;
 
             var endScale = enemyOriginalScale;
 
+            var startPosition = enemyHomePosition + new Vector3(offsetX, 0f, 0f);
+
+            var endPosition = enemyHomePosition;
 
 
-            // Always start from spawn pose — not from death shrink (0.1 scale) or previous alpha.
+
+            // Always start from entrance pose — not from death shrink or previous alpha.
 
             enemyTransform.localScale = startScale;
 
@@ -1796,15 +1882,25 @@ namespace Crownsfall.Combat
 
             {
 
-                SetRectAnchoredPosition(enemyRect, enemyHomePosition);
+                SetRectAnchoredPosition(enemyRect, startPosition);
 
             }
 
 
 
-            if (enemySpawnDuration <= 0f)
+            if (duration <= 0f)
 
             {
+
+                if (enemyRect != null)
+
+                {
+
+                    SetRectAnchoredPosition(enemyRect, endPosition);
+
+                }
+
+
 
                 enemyTransform.localScale = endScale;
 
@@ -1818,7 +1914,7 @@ namespace Crownsfall.Combat
 
 
 
-                Debug.Log("Enemy Spawn Animation Finished");
+                Debug.Log(isBoss ? "Boss Entrance Animation Finished" : "Enemy Entrance Animation Finished");
 
                 yield break;
 
@@ -1828,17 +1924,27 @@ namespace Crownsfall.Combat
 
             var elapsed = 0f;
 
-            while (elapsed < enemySpawnDuration)
+            while (elapsed < duration)
 
             {
 
                 elapsed += Time.deltaTime;
 
-                var t = Mathf.Clamp01(elapsed / enemySpawnDuration);
+                var t = Mathf.Clamp01(elapsed / duration);
 
-                // Ease out: fast start, gentle settle at full size.
+                // Ease out: fast slide-in, gentle settle at home.
 
                 var eased = 1f - (1f - t) * (1f - t);
+
+
+
+                if (enemyRect != null)
+
+                {
+
+                    SetRectAnchoredPosition(enemyRect, Vector3.Lerp(startPosition, endPosition, eased));
+
+                }
 
 
 
@@ -1860,6 +1966,16 @@ namespace Crownsfall.Combat
 
 
 
+            if (enemyRect != null)
+
+            {
+
+                SetRectAnchoredPosition(enemyRect, endPosition);
+
+            }
+
+
+
             enemyTransform.localScale = endScale;
 
             if (canvasGroup != null)
@@ -1872,17 +1988,209 @@ namespace Crownsfall.Combat
 
 
 
-            if (enemyRect != null)
+            // Landing bounce: quick overshoot then settle (heavier for bosses).
+
+            yield return AnimateEntranceLandingBounce(enemyTransform, endScale, bounceOvershoot, 0.08f);
+
+
+
+            if (isBoss)
 
             {
 
-                SetRectAnchoredPosition(enemyRect, enemyHomePosition);
+                yield return FlashBossEntranceBackdrop();
 
             }
 
 
 
-            Debug.Log("Enemy Spawn Animation Finished");
+            Debug.Log(isBoss ? "Boss Entrance Animation Finished" : "Enemy Entrance Animation Finished");
+
+        }
+
+
+
+        /// <summary>
+
+        /// Quick scale punch at the end of an entrance (e.g. 1.0 → 1.05 → 1.0 over ~0.08s).
+
+        /// </summary>
+
+        private static IEnumerator AnimateEntranceLandingBounce(
+
+            Transform rig,
+
+            Vector3 baseScale,
+
+            float overshootMultiplier,
+
+            float duration)
+
+        {
+
+            if (rig == null || duration <= 0f)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var punchScale = baseScale * overshootMultiplier;
+
+            var halfDuration = duration * 0.5f;
+
+
+
+            var elapsed = 0f;
+
+            while (elapsed < halfDuration)
+
+            {
+
+                elapsed += Time.deltaTime;
+
+                var t = Mathf.Clamp01(elapsed / halfDuration);
+
+                rig.localScale = Vector3.Lerp(baseScale, punchScale, t);
+
+                yield return null;
+
+            }
+
+
+
+            elapsed = 0f;
+
+            while (elapsed < halfDuration)
+
+            {
+
+                elapsed += Time.deltaTime;
+
+                var t = Mathf.Clamp01(elapsed / halfDuration);
+
+                // Sin ease settles the overshoot smoothly back to rest scale.
+
+                var eased = Mathf.Sin(t * Mathf.PI * 0.5f);
+
+                rig.localScale = Vector3.Lerp(punchScale, baseScale, eased);
+
+                yield return null;
+
+            }
+
+
+
+            rig.localScale = baseScale;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Brief red flash on the enemy slot backdrop when a boss lands. Skips gracefully if no Image is found.
+
+        /// </summary>
+
+        private IEnumerator FlashBossEntranceBackdrop(float flashDuration = 0.15f)
+
+        {
+
+            var backdrop = ResolveBossEntranceFlashBackdrop();
+
+            if (backdrop == null)
+
+            {
+
+                // No EnemyBackdrop in scene — boss entrance still plays without the flash.
+
+                yield break;
+
+            }
+
+
+
+            var originalColor = backdrop.color;
+
+            var flashColor = new Color(0.85f, 0.12f, 0.12f, Mathf.Max(originalColor.a, 0.75f));
+
+            backdrop.color = flashColor;
+
+
+
+            var elapsed = 0f;
+
+            while (elapsed < flashDuration)
+
+            {
+
+                elapsed += Time.deltaTime;
+
+                var t = Mathf.Clamp01(elapsed / flashDuration);
+
+                backdrop.color = Color.Lerp(flashColor, originalColor, t);
+
+                yield return null;
+
+            }
+
+
+
+            backdrop.color = originalColor;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Uses the serialized boss flash Image, or finds EnemyBackdrop under the enemy rig's parent slot.
+
+        /// </summary>
+
+        private Image ResolveBossEntranceFlashBackdrop()
+
+        {
+
+            if (bossEntranceFlashBackdrop != null)
+
+            {
+
+                return bossEntranceFlashBackdrop;
+
+            }
+
+
+
+            if (enemyFighterRig == null)
+
+            {
+
+                return null;
+
+            }
+
+
+
+            var enemySlot = enemyFighterRig.transform.parent;
+
+            if (enemySlot == null)
+
+            {
+
+                return null;
+
+            }
+
+
+
+            var backdropTransform = enemySlot.Find("EnemyBackdrop");
+
+            return backdropTransform != null ? backdropTransform.GetComponent<Image>() : null;
 
         }
 

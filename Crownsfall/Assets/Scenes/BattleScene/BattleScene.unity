@@ -507,14 +507,18 @@ MonoBehaviour:
   hitShakeSteps: 6
   deathShrinkDuration: 0.35
   deathFadeDuration: 0.35
-  enemySpawnDuration: 0.35
+  normalEntranceDuration: 0.45
+  bossEntranceDuration: 0.8
+  normalEntranceOffsetX: 250
+  bossEntranceOffsetX: 400
+  bossEntranceFlashBackdrop: {fileID: 0}
   victoryWaveNumber: 3
   victoryMoveUpAmount: 30
   victoryScaleMultiplier: 1.08
   victoryHoldDuration: 0.5
   victoryAnimDuration: 0.3
   useDebugStartWave: 1
-  debugStartWave: 10
+  debugStartWave: 1
   useDebugPlayerHealth: 0
   debugPlayerHealth: 1
 --- !u!4 &80257748
