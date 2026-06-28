@@ -199,6 +199,53 @@ namespace Crownsfall.Editor
                 "OK");
         }
 
+        [MenuItem("Tools/Fighter Tools/Setup Reward Screen", true)]
+        private static bool SetupRewardScreenFromMenuValidate()
+        {
+            return ValidateEditModeMenuItem();
+        }
+
+        [MenuItem("Tools/Fighter Tools/Setup Reward Screen")]
+        public static void SetupRewardScreenFromMenu()
+        {
+            if (!GuardEditModeOnly("Reward Screen Setup"))
+            {
+                return;
+            }
+
+            if (!TryEnsureBattleSceneOpen())
+            {
+                EditorUtility.DisplayDialog(
+                    "Setup Reward Screen",
+                    "Battle scene not found at:\n" + ScenePath +
+                    "\n\nOpen BattleScene or run Setup Battle Scene Production UI first.",
+                    "OK");
+                return;
+            }
+
+            var canvas = Object.FindObjectOfType<Canvas>();
+            if (canvas == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Setup Reward Screen",
+                    "No Canvas found in BattleScene.",
+                    "OK");
+                return;
+            }
+
+            var rewardScreen = EnsureRewardScreenOnCanvas(canvas.GetComponent<RectTransform>());
+
+            EditorSceneManager.SaveOpenScenes();
+            AssetDatabase.SaveAssets();
+
+            EditorUtility.DisplayDialog(
+                "Setup Reward Screen",
+                rewardScreen != null
+                    ? "Reward screen added under Canvas and wired to BattleManager."
+                    : "Could not create RewardScreenUI in BattleScene.",
+                "OK");
+        }
+
         /// <summary>
         /// Updates layout on an already-open Battle scene without rebuilding from scratch.
         /// Run this after tweaking layout constants, or use Setup Battle Scene Production UI for a full rebuild.
@@ -665,8 +712,11 @@ namespace Crownsfall.Editor
             var waveBanner = canvas != null
                 ? CreateWaveBannerPanel(canvas.GetComponent<RectTransform>())
                 : null;
+            var rewardScreen = canvas != null
+                ? CreateRewardScreenPanel(canvas.GetComponent<RectTransform>())
+                : null;
 
-            WireBattleManagerProduction(battleManager, playerRig, enemyRig, battleHud, waveBanner);
+            WireBattleManagerProduction(battleManager, playerRig, enemyRig, battleHud, waveBanner, rewardScreen);
             EnsureFloatingCombatTextSpawner(battleManagerObject, playerRig, enemyRig);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -1244,13 +1294,15 @@ namespace Crownsfall.Editor
             FighterRig playerRig,
             FighterRig enemyRig,
             BattleHUD battleHud,
-            WaveBannerUI waveBanner = null)
+            WaveBannerUI waveBanner = null,
+            RewardScreenUI rewardScreen = null)
         {
             var serializedManager = new SerializedObject(manager);
             serializedManager.FindProperty("playerFighterRig").objectReferenceValue = playerRig;
             serializedManager.FindProperty("enemyFighterRig").objectReferenceValue = enemyRig;
             serializedManager.FindProperty("battleHUD").objectReferenceValue = battleHud;
             serializedManager.FindProperty("waveBannerUI").objectReferenceValue = waveBanner;
+            serializedManager.FindProperty("rewardScreenUI").objectReferenceValue = rewardScreen;
             // Mirror player gear on the enemy so the dummy is visible during UI testing.
             serializedManager.FindProperty("enemyMirrorPlayerAppearance").boolValue = true;
             serializedManager.ApplyModifiedPropertiesWithoutUndo();
@@ -1374,6 +1426,7 @@ namespace Crownsfall.Editor
 
             EnsureGameOverPanelOnBattleHud();
             EnsureWaveBannerOnOpenScene();
+            EnsureRewardScreenOnOpenScene();
             EnsureFloatingCombatTextSpawnerOnBattleManager();
 
             return true;
@@ -1735,6 +1788,192 @@ namespace Crownsfall.Editor
 
             var serializedManager = new SerializedObject(battleManager);
             serializedManager.FindProperty("waveBannerUI").objectReferenceValue = waveBanner;
+            serializedManager.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(battleManager);
+        }
+
+        private const float RewardScreenCardWidth = 720f;
+        private const float RewardScreenCardHeight = 640f;
+        private const float RewardScreenTitleFontSize = 56f;
+        private const float RewardScreenBodyFontSize = 36f;
+        private const float RewardScreenRewardFontSize = 32f;
+        private static readonly Color RewardScreenBackdropColor = new Color(0.04f, 0.05f, 0.1f, 0.88f);
+
+        /// <summary>
+        /// Builds RewardScreenPanel under Canvas: full-screen dim overlay, centered card, hidden by default.
+        /// </summary>
+        private static RewardScreenUI CreateRewardScreenPanel(RectTransform canvasRect)
+        {
+            var panel = CreateRect("RewardScreenPanel", canvasRect);
+            panel.SetAsLastSibling();
+            StretchToParent(panel);
+
+            var backdrop = panel.gameObject.AddComponent<Image>();
+            backdrop.color = RewardScreenBackdropColor;
+            backdrop.raycastTarget = true;
+
+            var canvasGroup = panel.gameObject.AddComponent<CanvasGroup>();
+            canvasGroup.alpha = 0f;
+            canvasGroup.blocksRaycasts = false;
+            canvasGroup.interactable = false;
+
+            var card = CreateRect("RewardContent", panel);
+            card.anchorMin = new Vector2(0.5f, 0.5f);
+            card.anchorMax = new Vector2(0.5f, 0.5f);
+            card.pivot = new Vector2(0.5f, 0.5f);
+            card.anchoredPosition = Vector2.zero;
+            card.sizeDelta = new Vector2(RewardScreenCardWidth, RewardScreenCardHeight);
+
+            var cardImage = card.gameObject.AddComponent<Image>();
+            cardImage.color = new Color(0.08f, 0.09f, 0.15f, 0.98f);
+            cardImage.raycastTarget = true;
+
+            var layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(48, 48, 40, 40);
+            layout.spacing = 20f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            var titleText = CreateRewardScreenLine(card, "TitleText", "VICTORY", RewardScreenTitleFontSize, FontStyles.Bold);
+            titleText.color = new Color(0.92f, 0.88f, 0.72f, 1f);
+
+            var waveClearedText = CreateRewardScreenLine(card, "WaveClearedText", "Wave 1 Cleared", RewardScreenBodyFontSize, FontStyles.Bold);
+            var goldRewardText = CreateRewardScreenLine(card, "GoldRewardText", "+25 Gold", RewardScreenRewardFontSize, FontStyles.Normal);
+            goldRewardText.color = new Color(1f, 0.84f, 0.2f, 1f);
+            var xpRewardText = CreateRewardScreenLine(card, "XpRewardText", "+12 XP", RewardScreenRewardFontSize, FontStyles.Normal);
+            xpRewardText.color = new Color(0.55f, 0.85f, 1f, 1f);
+
+            var continueButton = CreateGameOverButton(card, "ContinueButton", "Continue",
+                new Color(0.18f, 0.62f, 0.36f, 1f));
+            continueButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 88f;
+
+            var rewardScreen = panel.gameObject.AddComponent<RewardScreenUI>();
+            WireRewardScreenUI(rewardScreen, canvasGroup, card, titleText, waveClearedText, goldRewardText, xpRewardText, continueButton);
+            rewardScreen.ApplyPanelLayout();
+
+            panel.gameObject.SetActive(false);
+            return rewardScreen;
+        }
+
+        private static TextMeshProUGUI CreateRewardScreenLine(
+            RectTransform parent,
+            string objectName,
+            string defaultText,
+            float fontSize,
+            FontStyles fontStyle)
+        {
+            var line = CreateNamedTmpText(parent, objectName, defaultText, fontSize, fontStyle);
+            line.alignment = TextAlignmentOptions.Center;
+            line.gameObject.AddComponent<LayoutElement>().preferredHeight = fontSize + 20f;
+            return line;
+        }
+
+        private static void WireRewardScreenUI(
+            RewardScreenUI rewardScreen,
+            CanvasGroup canvasGroup,
+            RectTransform contentRect,
+            TextMeshProUGUI titleText,
+            TextMeshProUGUI waveClearedText,
+            TextMeshProUGUI goldRewardText,
+            TextMeshProUGUI xpRewardText,
+            Button continueButton)
+        {
+            var serialized = new SerializedObject(rewardScreen);
+            serialized.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
+            serialized.FindProperty("contentRect").objectReferenceValue = contentRect;
+            serialized.FindProperty("titleText").objectReferenceValue = titleText;
+            serialized.FindProperty("waveClearedText").objectReferenceValue = waveClearedText;
+            serialized.FindProperty("goldRewardText").objectReferenceValue = goldRewardText;
+            serialized.FindProperty("xpRewardText").objectReferenceValue = xpRewardText;
+            serialized.FindProperty("continueButton").objectReferenceValue = continueButton;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(rewardScreen);
+        }
+
+        /// <summary>
+        /// Adds RewardScreenPanel to BattleScene Canvas when polishing or via Setup Reward Screen menu.
+        /// </summary>
+        private static RewardScreenUI EnsureRewardScreenOnCanvas(RectTransform canvasRect)
+        {
+            if (canvasRect == null)
+            {
+                return null;
+            }
+
+            var scene = canvasRect.gameObject.scene;
+            if (!IsBattleScene(scene))
+            {
+                Debug.LogWarning(
+                    "RewardScreen setup skipped: RewardScreenUI must only be added to BattleScene.");
+                return null;
+            }
+
+            var existingInScene = FindRewardScreensInScene(scene);
+            if (existingInScene.Length > 1)
+            {
+                Debug.LogWarning(
+                    $"Found {existingInScene.Length} RewardScreenUI instances in {scene.name}. " +
+                    "Reusing the first; remove duplicates manually.");
+            }
+
+            if (existingInScene.Length > 0)
+            {
+                var existing = existingInScene[0];
+                existing.transform.SetAsLastSibling();
+                existing.ApplyPanelLayout();
+
+                var backdrop = existing.GetComponent<Image>();
+                if (backdrop != null)
+                {
+                    backdrop.color = RewardScreenBackdropColor;
+                }
+
+                WireRewardScreenOnBattleManager(existing);
+                return existing;
+            }
+
+            var rewardScreen = CreateRewardScreenPanel(canvasRect);
+            WireRewardScreenOnBattleManager(rewardScreen);
+            return rewardScreen;
+        }
+
+        private static RewardScreenUI[] FindRewardScreensInScene(Scene scene)
+        {
+            return Object.FindObjectsOfType<RewardScreenUI>()
+                .Where(rewardScreen => rewardScreen != null && rewardScreen.gameObject.scene == scene)
+                .ToArray();
+        }
+
+        private static void EnsureRewardScreenOnOpenScene()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!IsBattleScene(scene))
+            {
+                return;
+            }
+
+            var canvas = Object.FindObjectOfType<Canvas>();
+            if (canvas == null)
+            {
+                return;
+            }
+
+            EnsureRewardScreenOnCanvas(canvas.GetComponent<RectTransform>());
+        }
+
+        private static void WireRewardScreenOnBattleManager(RewardScreenUI rewardScreen)
+        {
+            var battleManager = Object.FindObjectOfType<BattleManager>();
+            if (battleManager == null)
+            {
+                return;
+            }
+
+            var serializedManager = new SerializedObject(battleManager);
+            serializedManager.FindProperty("rewardScreenUI").objectReferenceValue = rewardScreen;
             serializedManager.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(battleManager);
         }

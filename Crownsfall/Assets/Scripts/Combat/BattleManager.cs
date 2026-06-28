@@ -65,6 +65,14 @@ namespace Crownsfall.Combat
 
 
 
+        [Header("Reward Screen")]
+
+        [Tooltip("Post-wave reward overlay shown after each enemy defeat. Auto-found if left empty.")]
+
+        public RewardScreenUI rewardScreenUI;
+
+
+
         [Header("Testing (used when no session data)")]
 
         [Tooltip("Fighter name used when playing Battle scene directly without Character Builder.")]
@@ -795,6 +803,10 @@ namespace Crownsfall.Combat
 
 
 
+            yield return ShowRewardScreenForClearedWave();
+
+
+
             // Final wave cleared — play victory once, then stop combat (no next wave).
 
             if (IsBattleWon())
@@ -809,7 +821,13 @@ namespace Crownsfall.Combat
 
 
 
-            yield return new WaitForSeconds(waveTransitionDelay);
+            if (rewardScreenUI == null)
+
+            {
+
+                yield return new WaitForSeconds(waveTransitionDelay);
+
+            }
 
 
 
@@ -3007,6 +3025,36 @@ namespace Crownsfall.Combat
 
             }
 
+
+
+            if (rewardScreenUI == null)
+
+            {
+
+                rewardScreenUI = FindObjectOfType<RewardScreenUI>();
+
+            }
+
+
+
+            if (rewardScreenUI != null && rewardScreenUI.gameObject.scene != gameObject.scene)
+
+            {
+
+                rewardScreenUI = null;
+
+            }
+
+
+
+            if (rewardScreenUI == null)
+
+            {
+
+                Debug.LogWarning("RewardScreenUI not found in BattleScene.");
+
+            }
+
         }
 
 
@@ -3385,6 +3433,74 @@ namespace Crownsfall.Combat
                 isCritical = isCritical
 
             });
+
+        }
+
+
+
+        /// <summary>
+
+        /// v1 display-only rewards: Gold = 25 + wave * 5, XP = 12 + wave * 3.
+
+        /// </summary>
+
+        private static int CalculateWaveGoldReward(int waveNumber)
+
+        {
+
+            return 25 + waveNumber * 5;
+
+        }
+
+
+
+        /// <summary>
+
+        /// v1 display-only rewards: Gold = 25 + wave * 5, XP = 12 + wave * 3.
+
+        /// </summary>
+
+        private static int CalculateWaveXpReward(int waveNumber)
+
+        {
+
+            return 12 + waveNumber * 3;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Shows the post-wave reward overlay and waits for Continue. No-op when RewardScreenUI is missing.
+
+        /// </summary>
+
+        private IEnumerator ShowRewardScreenForClearedWave()
+
+        {
+
+            if (rewardScreenUI == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var goldAmount = CalculateWaveGoldReward(_waveNumber);
+
+            var xpAmount = CalculateWaveXpReward(_waveNumber);
+
+
+
+            rewardScreenUI.ShowReward(_waveNumber, goldAmount, xpAmount);
+
+            yield return rewardScreenUI.WaitForContinue();
+
+            rewardScreenUI.Hide();
 
         }
 

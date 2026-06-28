@@ -391,6 +391,7 @@
 "Assets/Scripts/Combat/Skills/SkillResult.cs"
 "Assets/Scripts/Combat/UI/FloatingCombatText.cs"
 "Assets/Scripts/Combat/UI/FloatingCombatTextSpawner.cs"
+"Assets/Scripts/Combat/UI/RewardScreenUI.cs"
 "Assets/Scripts/Combat/UI/WaveBannerUI.cs"
 "Assets/Scripts/Core/GameManager.cs"
 "Assets/Scripts/Core/GameSession.cs"
