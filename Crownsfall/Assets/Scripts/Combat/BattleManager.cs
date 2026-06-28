@@ -993,7 +993,7 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Player turn wrapper: play the lunge animation first, then run existing damage logic.
+        /// Player turn wrapper: compute crit before lunge, play animation, apply damage, then defender reacts.
 
         /// </summary>
 
@@ -1001,13 +1001,63 @@ namespace Crownsfall.Combat
 
         {
 
-            yield return AnimateAttackLunge(playerFighterRig, playerHomePosition, enemyHomePosition);
+            // Skills run before the lunge so crit can boost lunge distance for that swing only.
 
-            ApplyPlayerAttackDamage();
+            var attackOutcome = ComputePlayerAttackOutcome();
 
-            // Defender reacts after damage is applied (not during the attacker's lunge).
 
-            yield return ShakeHitReaction(GetRigTransform(enemyFighterRig));
+
+            const float critLungeMultiplier = 1.2f;
+
+            const float critShakeMultiplier = 1.5f;
+
+            var lungeDistanceMultiplier = attackOutcome.isCritical ? critLungeMultiplier : 1f;
+
+
+
+            yield return AnimateAttackLunge(
+
+                playerFighterRig,
+
+                playerHomePosition,
+
+                enemyHomePosition,
+
+                lungeDistanceMultiplier);
+
+
+
+            ApplyPlayerAttackOutcome(attackOutcome);
+
+
+
+            if (enemyFighterRig != null)
+
+            {
+
+                if (attackOutcome.isCritical)
+
+                {
+
+                    yield return enemyFighterRig.FlashDamageCritical();
+
+                    yield return enemyFighterRig.ScalePunch();
+
+                    yield return ShakeHitReaction(GetRigTransform(enemyFighterRig), critShakeMultiplier);
+
+                }
+
+                else
+
+                {
+
+                    enemyFighterRig.FlashDamage();
+
+                    yield return ShakeHitReaction(GetRigTransform(enemyFighterRig));
+
+                }
+
+            }
 
         }
 
@@ -1027,7 +1077,11 @@ namespace Crownsfall.Combat
 
             ApplyEnemyAttackDamage();
 
-            // Player rig shakes after enemy attack damage lands.
+            // Player rig shakes and flashes after enemy attack damage lands.
+            if (playerFighterRig != null)
+            {
+                playerFighterRig.FlashDamage();
+            }
 
             yield return ShakeHitReaction(GetRigTransform(playerFighterRig));
 
@@ -1043,7 +1097,15 @@ namespace Crownsfall.Combat
 
         /// </summary>
 
-        private IEnumerator AnimateAttackLunge(FighterRig attackerRig, Vector3 home, Vector3 targetHome)
+        private IEnumerator AnimateAttackLunge(
+
+            FighterRig attackerRig,
+
+            Vector3 home,
+
+            Vector3 targetHome,
+
+            float distanceMultiplier = 1f)
 
         {
 
@@ -1061,7 +1123,11 @@ namespace Crownsfall.Combat
 
             // Strike point = partway between attacker home and opponent home (e.g. 35% of the gap).
 
-            var attackPos = Vector3.Lerp(home, targetHome, attackDistancePercent);
+            // distanceMultiplier > 1 pushes crit lunges farther toward the target.
+
+            var effectiveDistance = attackDistancePercent * distanceMultiplier;
+
+            var attackPos = Vector3.Lerp(home, targetHome, effectiveDistance);
 
 
 
@@ -1101,7 +1167,7 @@ namespace Crownsfall.Combat
 
         /// </summary>
 
-        private IEnumerator ShakeHitReaction(Transform target)
+        private IEnumerator ShakeHitReaction(Transform target, float strengthMultiplier = 1f)
 
         {
 
@@ -1121,6 +1187,8 @@ namespace Crownsfall.Combat
 
             var stepDuration = hitShakeDuration / hitShakeSteps;
 
+            var shakeStrength = hitShakeStrength * strengthMultiplier;
+
 
 
             for (var i = 0; i < hitShakeSteps; i++)
@@ -1129,7 +1197,7 @@ namespace Crownsfall.Combat
 
                 // Alternate left (+X) and right (-X) for a quick hit-recoil feel.
 
-                var xOffset = (i % 2 == 0) ? hitShakeStrength : -hitShakeStrength;
+                var xOffset = (i % 2 == 0) ? shakeStrength : -shakeStrength;
 
                 target.localPosition = originalLocal + new Vector3(xOffset, 0f, 0f);
 
@@ -1537,20 +1605,50 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Player attack: base damage, weapon skill via SkillEngine, optional mount skill (poison etc.),
-
-        /// then apply to enemy.
+        /// Pre-computed player attack data (skills rolled before the lunge animation).
 
         /// </summary>
 
-        private void ApplyPlayerAttackDamage()
+        private struct PlayerAttackOutcome
+
+        {
+
+            public int finalDamage;
+
+            public bool isCritical;
+
+            public SkillResult weaponResult;
+
+            public SkillResult mountResult;
+
+            public EquipmentSkill weaponSkill;
+
+            public EquipmentSkill mountSkill;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Rolls weapon/mount skills and final damage without applying HP or raising damage events.
+
+        /// Called before the attack lunge so crit can change lunge distance.
+
+        /// </summary>
+
+        private PlayerAttackOutcome ComputePlayerAttackOutcome()
 
         {
 
             RaiseCombatEvent(
+
                 CombatEventType.PlayerAttack,
+
                 "Player attacks.",
+
                 sourceName: _playerFighter.fighterName,
+
                 targetName: _enemyFighter.enemyName);
 
 
@@ -1563,13 +1661,23 @@ namespace Crownsfall.Combat
 
             var weaponResult = _skillEngine.ApplyPlayerAttackSkills(baseDamage, weaponSkill, context);
 
-            var anySkillTriggered = ApplyPlayerAttackSkillEffects(weaponResult, weaponSkill);
 
-            var finalDamage = weaponResult.modifiedDamage;
 
-            SkillResult mountResult = null;
+            var outcome = new PlayerAttackOutcome
 
-            // Poison and Life Steal can live on weapon OR mount — check mount even when weapon already ran.
+            {
+
+                weaponResult = weaponResult,
+
+                weaponSkill = weaponSkill,
+
+                finalDamage = weaponResult.modifiedDamage,
+
+                isCritical = weaponResult.isCritical
+
+            };
+
+
 
             var mountSkill = _playerFighter.mount?.skill;
 
@@ -1577,9 +1685,53 @@ namespace Crownsfall.Combat
 
             {
 
-                mountResult = _skillEngine.ApplyPlayerAttackSkills(finalDamage, mountSkill, context);
+                var mountResult = _skillEngine.ApplyPlayerAttackSkills(outcome.finalDamage, mountSkill, context);
 
-                if (ApplyPlayerAttackSkillEffects(mountResult, mountSkill))
+                outcome.mountResult = mountResult;
+
+                outcome.mountSkill = mountSkill;
+
+                outcome.finalDamage = mountResult.modifiedDamage;
+
+            }
+
+
+
+            return outcome;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Applies a pre-computed player attack: skill events, damage, and life steal.
+
+        /// </summary>
+
+        private void ApplyPlayerAttackOutcome(PlayerAttackOutcome outcome)
+
+        {
+
+            var anySkillTriggered = false;
+
+
+
+            if (ApplyPlayerAttackSkillEffects(outcome.weaponResult, outcome.weaponSkill))
+
+            {
+
+                anySkillTriggered = true;
+
+            }
+
+
+
+            if (outcome.mountResult != null)
+
+            {
+
+                if (ApplyPlayerAttackSkillEffects(outcome.mountResult, outcome.mountSkill))
 
                 {
 
@@ -1587,37 +1739,63 @@ namespace Crownsfall.Combat
 
                 }
 
-
-
-                finalDamage = mountResult.modifiedDamage;
-
             }
 
 
 
-            _enemyFighter.TakeDamage(finalDamage);
+            _enemyFighter.TakeDamage(outcome.finalDamage);
 
             UpdateEnemyHealthDisplay();
+
+
 
             var damageSuffix = anySkillTriggered ? "!" : ".";
 
             RaiseCombatEvent(
+
                 CombatEventType.DamageDealt,
-                $"Player dealt {finalDamage} damage{damageSuffix}",
+
+                $"Player dealt {outcome.finalDamage} damage{damageSuffix}",
+
                 sourceName: _playerFighter.fighterName,
+
                 targetName: _enemyFighter.enemyName,
-                amount: finalDamage);
 
-            // Life Steal heals based on final damage actually dealt (after crit etc.).
-            ApplyLifeStealFromResult(weaponResult, weaponSkill, finalDamage);
+                amount: outcome.finalDamage,
 
-            if (mountResult != null)
+                isCritical: outcome.isCritical);
+
+
+
+            ApplyLifeStealFromResult(outcome.weaponResult, outcome.weaponSkill, outcome.finalDamage);
+
+
+
+            if (outcome.mountResult != null)
 
             {
 
-                ApplyLifeStealFromResult(mountResult, mountSkill, finalDamage);
+                ApplyLifeStealFromResult(outcome.mountResult, outcome.mountSkill, outcome.finalDamage);
 
             }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Player attack: base damage, weapon skill via SkillEngine, optional mount skill (poison etc.),
+
+        /// then apply to enemy.
+
+        /// </summary>
+
+        private void ApplyPlayerAttackDamage()
+
+        {
+
+            ApplyPlayerAttackOutcome(ComputePlayerAttackOutcome());
 
         }
 
@@ -1743,6 +1921,11 @@ namespace Crownsfall.Combat
             _enemyFighter.TakeDamage(_enemyPoisonDamage);
             UpdateEnemyHealthDisplay();
 
+            if (enemyFighterRig != null)
+            {
+                enemyFighterRig.FlashDamage();
+            }
+
             RaiseCombatEvent(
                 CombatEventType.DamageDealt,
                 $"Poison dealt {_enemyPoisonDamage} damage!",
@@ -1796,6 +1979,11 @@ namespace Crownsfall.Combat
 
             _enemyFighter.TakeDamage(_enemyBurnDamage);
             UpdateEnemyHealthDisplay();
+
+            if (enemyFighterRig != null)
+            {
+                enemyFighterRig.FlashDamage();
+            }
 
             RaiseCombatEvent(
                 CombatEventType.DamageDealt,
@@ -2399,7 +2587,9 @@ namespace Crownsfall.Combat
 
             int? score = null,
 
-            bool? isBoss = null)
+            bool? isBoss = null,
+
+            bool isCritical = false)
 
         {
 
@@ -2421,7 +2611,9 @@ namespace Crownsfall.Combat
 
                 score = score ?? (_playerFighter?.currentScore ?? 0),
 
-                isBoss = isBoss ?? (_currentProgressionProfile?.isBossWave ?? false)
+                isBoss = isBoss ?? (_currentProgressionProfile?.isBossWave ?? false),
+
+                isCritical = isCritical
 
             });
 

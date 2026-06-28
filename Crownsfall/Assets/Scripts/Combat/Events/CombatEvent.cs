@@ -54,6 +54,9 @@ namespace Crownsfall.Combat.Events
         /// <summary>True when this event belongs to a boss wave.</summary>
         public bool isBoss;
 
+        /// <summary>True when player attack damage was a critical hit (used for floating text styling).</summary>
+        public bool isCritical;
+
         /// <summary>Time.time when the event was raised (seconds since scene load).</summary>
         public float timestamp;
     }

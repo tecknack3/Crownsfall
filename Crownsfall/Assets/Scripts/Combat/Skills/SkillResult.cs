@@ -14,6 +14,9 @@ namespace Crownsfall.Combat.Skills
         /// <summary>Optional log line when triggered (e.g. "CRITICAL HIT!"). Can be empty.</summary>
         public string message;
 
+        /// <summary>True when this attack was a critical hit (visuals only — set by CriticalStrikeSkill).</summary>
+        public bool isCritical;
+
         /// <summary>When true, BattleManager applies burn DoT using burnDamage and burnDuration.</summary>
         public bool applyBurn;
 

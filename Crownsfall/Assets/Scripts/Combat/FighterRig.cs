@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using Crownsfall.Characters;
 using UnityEngine;
 using UnityEngine.UI;
@@ -76,6 +78,31 @@ namespace Crownsfall.Combat
 
         private bool _faceRight = true;
         private bool _crownVisible;
+
+        /// <summary>
+        /// How long sprite layers stay white during a hit flash.
+        /// </summary>
+        private const float FlashDuration = 0.12f;
+
+        /// <summary>
+        /// Tracks the running flash so a new hit can restart cleanly.
+        /// </summary>
+        private Coroutine _flashCoroutine;
+
+        /// <summary>
+        /// Rest scale captured when a scale punch starts (preserves facing flip on X).
+        /// </summary>
+        private Vector3 _scalePunchRestScale = Vector3.one;
+
+        /// <summary>
+        /// Images flashed during the current/restarted hit reaction.
+        /// </summary>
+        private Image[] _flashImages;
+
+        /// <summary>
+        /// Colors to restore after the flash (includes enemy tint, crown, etc.).
+        /// </summary>
+        private Color[] _flashOriginalColors;
 
         /// <summary>
         /// Runs once when the rig loads. Configures images and positions each anchor.
@@ -177,6 +204,82 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
+        /// Brief white flash on all visible equipment Images when this fighter takes damage.
+        /// Fire-and-forget — starts a coroutine internally and does not block callers.
+        /// If already flashing, stops the previous flash, restores colors, then starts fresh.
+        /// </summary>
+        public void FlashDamage()
+        {
+            if (_flashCoroutine != null)
+            {
+                StopCoroutine(_flashCoroutine);
+                _flashCoroutine = null;
+                RestoreFlashColors();
+            }
+
+            _flashCoroutine = StartCoroutine(FlashDamageRoutine(FlashDuration));
+        }
+
+        /// <summary>
+        /// Two quick white flashes for critical hits — caller can yield return this coroutine.
+        /// </summary>
+        public IEnumerator FlashDamageCritical()
+        {
+            if (_flashCoroutine != null)
+            {
+                StopCoroutine(_flashCoroutine);
+                _flashCoroutine = null;
+                RestoreFlashColors();
+            }
+
+            // Shorter per-flash duration so the double hit reads as one sharp burst.
+            const float critFlashDuration = 0.1f;
+            const float gapBetweenFlashes = 0.04f;
+
+            yield return FlashDamageRoutine(critFlashDuration);
+            yield return new WaitForSeconds(gapBetweenFlashes);
+            yield return FlashDamageRoutine(critFlashDuration);
+        }
+
+        /// <summary>
+        /// Brief scale pop on the rig root (e.g. enemy squashes outward on a crit).
+        /// Multiplies current localScale uniformly so facing flip on X is preserved.
+        /// </summary>
+        public IEnumerator ScalePunch(float peakScaleMultiplier = 1.12f, float duration = 0.15f)
+        {
+            _scalePunchRestScale = transform.localScale;
+
+            if (duration <= 0f || peakScaleMultiplier <= 1f)
+            {
+                yield break;
+            }
+
+            var peakScale = _scalePunchRestScale * peakScaleMultiplier;
+            var halfDuration = duration * 0.5f;
+            var elapsed = 0f;
+
+            while (elapsed < halfDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / halfDuration);
+                transform.localScale = Vector3.Lerp(_scalePunchRestScale, peakScale, t);
+                yield return null;
+            }
+
+            elapsed = 0f;
+
+            while (elapsed < halfDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / halfDuration);
+                transform.localScale = Vector3.Lerp(peakScale, _scalePunchRestScale, t);
+                yield return null;
+            }
+
+            transform.localScale = _scalePunchRestScale;
+        }
+
+        /// <summary>
         /// Moves each equipment anchor to its configured offset so parts stack correctly.
         /// Call after changing offsets at runtime, or from the Inspector via a custom editor later.
         /// </summary>
@@ -248,6 +351,80 @@ namespace Crownsfall.Combat
             }
 
             image.color = tint;
+        }
+
+        /// <summary>
+        /// Collects every Image under this rig, stores each current color, flashes white, then restores.
+        /// </summary>
+        private IEnumerator FlashDamageRoutine(float flashDuration)
+        {
+            CacheFlashImagesAndColors();
+
+            if (_flashImages == null || _flashImages.Length == 0)
+            {
+                _flashCoroutine = null;
+                yield break;
+            }
+
+            for (var i = 0; i < _flashImages.Length; i++)
+            {
+                _flashImages[i].color = Color.white;
+            }
+
+            yield return new WaitForSeconds(flashDuration);
+
+            RestoreFlashColors();
+            _flashCoroutine = null;
+        }
+
+        /// <summary>
+        /// Finds all child Images with an assigned sprite so empty/hidden layers are skipped safely.
+        /// </summary>
+        private void CacheFlashImagesAndColors()
+        {
+            var allImages = GetComponentsInChildren<Image>(includeInactive: true);
+            var validImages = new List<Image>();
+
+            foreach (var image in allImages)
+            {
+                if (image == null || image.sprite == null)
+                {
+                    continue;
+                }
+
+                validImages.Add(image);
+            }
+
+            _flashImages = validImages.ToArray();
+            _flashOriginalColors = new Color[_flashImages.Length];
+
+            for (var i = 0; i < _flashImages.Length; i++)
+            {
+                _flashOriginalColors[i] = _flashImages[i].color;
+            }
+        }
+
+        /// <summary>
+        /// Puts each flashed Image back to the color it had when the flash started.
+        /// </summary>
+        private void RestoreFlashColors()
+        {
+            if (_flashImages == null || _flashOriginalColors == null)
+            {
+                return;
+            }
+
+            var count = Mathf.Min(_flashImages.Length, _flashOriginalColors.Length);
+
+            for (var i = 0; i < count; i++)
+            {
+                if (_flashImages[i] == null)
+                {
+                    continue;
+                }
+
+                _flashImages[i].color = _flashOriginalColors[i];
+            }
         }
     }
 }

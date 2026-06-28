@@ -35,6 +35,7 @@ namespace Crownsfall.Combat.Skills
             result.modifiedDamage = Mathf.RoundToInt(baseDamage * skill.value);
             result.wasTriggered = true;
             result.message = "CRITICAL HIT!";
+            result.isCritical = true;
             return result;
         }
 
