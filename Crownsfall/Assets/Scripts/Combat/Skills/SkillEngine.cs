@@ -5,7 +5,7 @@ namespace Crownsfall.Combat.Skills
 {
     /// <summary>
     /// Looks up skill effects by SkillType and runs them during combat.
-    /// v1 registers Critical Strike only; more skills can be added later.
+    /// v1 registers Critical Strike and Shield; more skills can be added later.
     /// </summary>
     public class SkillEngine
     {
@@ -18,6 +18,7 @@ namespace Crownsfall.Combat.Skills
         public SkillEngine()
         {
             RegisterEffect(new CriticalStrikeSkill());
+            RegisterEffect(new ShieldSkill());
         }
 
         /// <summary>
@@ -56,7 +57,7 @@ namespace Crownsfall.Combat.Skills
                 return PassThrough(baseDamage);
             }
 
-            // Skill type exists in data but we have no handler yet (Shield, Burn, etc.).
+            // Skill type exists in data but we have no handler yet (Burn, LifeSteal, etc.).
             if (!_effects.TryGetValue(skill.skillType, out var effect))
             {
                 return PassThrough(baseDamage);

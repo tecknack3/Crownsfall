@@ -358,15 +358,7 @@ namespace Crownsfall.Combat
 
                     // --- Enemy turn (only if still alive) ---
 
-                    var enemyDamage = CalculateDamage(_enemyFighter.attack, _playerFighter.defense);
-
-                    _playerFighter.TakeDamage(enemyDamage);
-
-
-
-                    UpdatePlayerHealthDisplay();
-
-                    LogCombatMessage($"Enemy dealt {enemyDamage} damage!");
+                    ApplyEnemyAttackDamage();
 
 
 
@@ -672,6 +664,54 @@ namespace Crownsfall.Combat
             {
 
                 LogCombatMessage($"Player dealt {result.modifiedDamage} damage.");
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Enemy attack: base damage, body skill via SkillEngine, then apply to player.
+
+        /// </summary>
+
+        private void ApplyEnemyAttackDamage()
+
+        {
+
+            var baseDamage = CalculateDamage(_enemyFighter.attack, _playerFighter.defense);
+
+            var context = CreateBattleContext();
+
+            var skill = _playerFighter.body?.skill;
+
+            var result = _skillEngine.ApplyEnemyAttackSkills(baseDamage, skill, context);
+
+
+
+            _playerFighter.TakeDamage(result.modifiedDamage);
+
+            UpdatePlayerHealthDisplay();
+
+
+
+            if (result.wasTriggered && !string.IsNullOrEmpty(result.message))
+
+            {
+
+                LogCombatMessage(result.message);
+
+                LogCombatMessage($"Enemy dealt {result.modifiedDamage} damage!");
+
+            }
+
+            else
+
+            {
+
+                LogCombatMessage($"Enemy dealt {result.modifiedDamage} damage.");
 
             }
 

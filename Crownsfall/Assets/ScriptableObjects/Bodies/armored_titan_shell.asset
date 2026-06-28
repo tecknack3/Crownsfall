@@ -24,3 +24,10 @@ MonoBehaviour:
   unlockedByDefault: 0
   purchaseCost: 0
   description: 
+  skill:
+    skillType: 6
+    skillName: Shield
+    description: 
+    value: 30
+    chance: 100
+    duration: 0
