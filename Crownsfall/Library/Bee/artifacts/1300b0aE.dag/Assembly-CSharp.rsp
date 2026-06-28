@@ -382,6 +382,7 @@
 "Assets/Scripts/Combat/Skills/BurnSkill.cs"
 "Assets/Scripts/Combat/Skills/CriticalStrikeSkill.cs"
 "Assets/Scripts/Combat/Skills/ISkillEffect.cs"
+"Assets/Scripts/Combat/Skills/LifeStealSkill.cs"
 "Assets/Scripts/Combat/Skills/PoisonSkill.cs"
 "Assets/Scripts/Combat/Skills/ShieldSkill.cs"
 "Assets/Scripts/Combat/Skills/SkillEngine.cs"

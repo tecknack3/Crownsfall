@@ -25,9 +25,9 @@ MonoBehaviour:
   purchaseCost: 0
   description: 
   skill:
-    skillType: 8
-    skillName: Poison
+    skillType: 5
+    skillName: Life Steal
     description: 
-    value: 5
+    value: 0.25
     chance: 100
-    duration: 3
+    duration: 0

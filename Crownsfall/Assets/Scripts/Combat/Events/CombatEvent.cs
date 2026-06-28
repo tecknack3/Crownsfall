@@ -12,6 +12,7 @@ namespace Crownsfall.Combat.Events
         EnemyAttack,
         SkillTriggered,
         DamageDealt,
+        HealingReceived,
         EnemyDefeated,
         PlayerDefeated,
         ScoreChanged,

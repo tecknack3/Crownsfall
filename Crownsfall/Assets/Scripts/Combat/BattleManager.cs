@@ -726,9 +726,9 @@ namespace Crownsfall.Combat
 
             var finalDamage = weaponResult.modifiedDamage;
 
+            SkillResult mountResult = null;
 
-
-            // Poison can live on weapon OR mount — check mount even when weapon already ran.
+            // Poison and Life Steal can live on weapon OR mount — check mount even when weapon already ran.
 
             var mountSkill = _playerFighter.mount?.skill;
 
@@ -736,7 +736,7 @@ namespace Crownsfall.Combat
 
             {
 
-                var mountResult = _skillEngine.ApplyPlayerAttackSkills(finalDamage, mountSkill, context);
+                mountResult = _skillEngine.ApplyPlayerAttackSkills(finalDamage, mountSkill, context);
 
                 if (ApplyPlayerAttackSkillEffects(mountResult, mountSkill))
 
@@ -766,6 +766,17 @@ namespace Crownsfall.Combat
                 sourceName: _playerFighter.fighterName,
                 targetName: _enemyFighter.enemyName,
                 amount: finalDamage);
+
+            // Life Steal heals based on final damage actually dealt (after crit etc.).
+            ApplyLifeStealFromResult(weaponResult, weaponSkill, finalDamage);
+
+            if (mountResult != null)
+
+            {
+
+                ApplyLifeStealFromResult(mountResult, mountSkill, finalDamage);
+
+            }
 
         }
 
@@ -824,6 +835,34 @@ namespace Crownsfall.Combat
 
             return skillTriggered;
 
+        }
+
+        /// <summary>
+        /// After player damage is applied, heals the player if Life Steal triggered on this attack.
+        /// Uses final damage dealt so crits and other modifiers are included in the heal amount.
+        /// </summary>
+        private void ApplyLifeStealFromResult(SkillResult result, EquipmentSkill skill, int damageDealt)
+        {
+            if (result == null || !result.applyLifeSteal || result.lifeStealPercent <= 0f)
+            {
+                return;
+            }
+
+            var healAmount = Mathf.RoundToInt(damageDealt * result.lifeStealPercent);
+            if (healAmount <= 0)
+            {
+                return;
+            }
+
+            _playerFighter.Heal(healAmount);
+            UpdatePlayerHealthDisplay();
+
+            RaiseCombatEvent(
+                CombatEventType.HealingReceived,
+                $"Player healed {healAmount} HP!",
+                sourceName: GetSkillDisplayName(skill),
+                targetName: _playerFighter.fighterName,
+                amount: healAmount);
         }
 
 
@@ -1450,7 +1489,7 @@ namespace Crownsfall.Combat
 
         /// Logs equipped skill names at battle start for debugging.
 
-        /// v1 applies Critical Strike and Burn from the weapon, Poison from weapon or mount;
+        /// v1 applies Critical Strike and Burn from the weapon, Poison and Life Steal from weapon or mount;
         /// other skills are data-only for now.
 
         /// </summary>

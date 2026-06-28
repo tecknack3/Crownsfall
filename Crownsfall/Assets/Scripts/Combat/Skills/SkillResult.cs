@@ -31,5 +31,11 @@ namespace Crownsfall.Combat.Skills
 
         /// <summary>How many enemy turns the poison lasts (one tick per enemy turn).</summary>
         public int poisonDuration;
+
+        /// <summary>When true, BattleManager heals the player after damage is dealt using lifeStealPercent.</summary>
+        public bool applyLifeSteal;
+
+        /// <summary>Fraction of damage dealt returned as HP (e.g. 0.25 = heal 25% of damage dealt).</summary>
+        public float lifeStealPercent;
     }
 }

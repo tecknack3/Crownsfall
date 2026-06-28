@@ -88,6 +88,14 @@ namespace Crownsfall.Combat.Events
 
                     return FormatDamageDealt(combatEvent);
 
+                case CombatEventType.HealingReceived:
+                    if (!string.IsNullOrEmpty(combatEvent.message))
+                    {
+                        return combatEvent.message;
+                    }
+
+                    return $"Player healed {combatEvent.amount} HP!";
+
                 case CombatEventType.EnemyDefeated:
                     // e.g. "Goblin Scout defeated!"
                     if (!string.IsNullOrEmpty(combatEvent.message))
