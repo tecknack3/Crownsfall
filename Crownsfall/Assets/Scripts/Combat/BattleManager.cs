@@ -156,6 +156,15 @@ namespace Crownsfall.Combat
         private int _enemyBurnDamage;
         private int _enemyBurnTurnsRemaining;
 
+        /// <summary>
+        /// Poison DoT state on the current wave enemy. Reset when a new enemy spawns.
+        /// Weaker per-tick than burn but often lasts longer. Ticks after burn each enemy turn.
+        /// </summary>
+        private bool _enemyIsPoisoned;
+        private int _enemyPoisonDamage;
+        private int _enemyPoisonTurnsRemaining;
+        private EquipmentSkill _enemyPoisonSourceSkill;
+
 
 
         /// <summary>
@@ -376,9 +385,10 @@ namespace Crownsfall.Combat
 
 
 
-                    // --- Enemy turn: burn DoT ticks first, then enemy attacks if still alive ---
+                    // --- Enemy turn: DoT ticks first (burn, then poison), then enemy attacks if still alive ---
 
                     ProcessEnemyBurnAtTurnStart();
+                    ProcessEnemyPoisonAtTurnStart();
 
 
 
@@ -497,6 +507,7 @@ namespace Crownsfall.Combat
             _enemyFighter = _enemyFactory.GenerateEnemy(wave);
 
             ResetEnemyBurnState();
+            ResetEnemyPoisonState();
 
         }
 
@@ -685,7 +696,9 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Player attack: base damage, weapon skill via SkillEngine, then apply to enemy.
+        /// Player attack: base damage, weapon skill via SkillEngine, optional mount skill (poison etc.),
+
+        /// then apply to enemy.
 
         /// </summary>
 
@@ -705,13 +718,76 @@ namespace Crownsfall.Combat
 
             var context = CreateBattleContext();
 
-            var skill = _playerFighter.weapon?.skill;
+            var weaponSkill = _playerFighter.weapon?.skill;
 
-            var result = _skillEngine.ApplyPlayerAttackSkills(baseDamage, skill, context);
+            var weaponResult = _skillEngine.ApplyPlayerAttackSkills(baseDamage, weaponSkill, context);
+
+            var anySkillTriggered = ApplyPlayerAttackSkillEffects(weaponResult, weaponSkill);
+
+            var finalDamage = weaponResult.modifiedDamage;
 
 
 
-            if (result.wasTriggered && !string.IsNullOrEmpty(result.message))
+            // Poison can live on weapon OR mount — check mount even when weapon already ran.
+
+            var mountSkill = _playerFighter.mount?.skill;
+
+            if (mountSkill != null && mountSkill.skillType != SkillType.None)
+
+            {
+
+                var mountResult = _skillEngine.ApplyPlayerAttackSkills(finalDamage, mountSkill, context);
+
+                if (ApplyPlayerAttackSkillEffects(mountResult, mountSkill))
+
+                {
+
+                    anySkillTriggered = true;
+
+                }
+
+
+
+                finalDamage = mountResult.modifiedDamage;
+
+            }
+
+
+
+            _enemyFighter.TakeDamage(finalDamage);
+
+            UpdateEnemyHealthDisplay();
+
+            var damageSuffix = anySkillTriggered ? "!" : ".";
+
+            RaiseCombatEvent(
+                CombatEventType.DamageDealt,
+                $"Player dealt {finalDamage} damage{damageSuffix}",
+                sourceName: _playerFighter.fighterName,
+                targetName: _enemyFighter.enemyName,
+                amount: finalDamage);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Raises skill events and applies DoT flags from one player-attack skill result.
+
+        /// Returns true if a visible skill message was shown.
+
+        /// </summary>
+
+        private bool ApplyPlayerAttackSkillEffects(SkillResult result, EquipmentSkill skill)
+
+        {
+
+            var skillTriggered = result.wasTriggered && !string.IsNullOrEmpty(result.message);
+
+
+
+            if (skillTriggered)
 
             {
 
@@ -736,22 +812,76 @@ namespace Crownsfall.Combat
 
 
 
-            _enemyFighter.TakeDamage(result.modifiedDamage);
+            if (result.applyPoison)
 
-            UpdateEnemyHealthDisplay();
+            {
 
-            var skillTriggered = result.wasTriggered && !string.IsNullOrEmpty(result.message);
-            var damageSuffix = skillTriggered ? "!" : ".";
-            RaiseCombatEvent(
-                CombatEventType.DamageDealt,
-                $"Player dealt {result.modifiedDamage} damage{damageSuffix}",
-                sourceName: _playerFighter.fighterName,
-                targetName: _enemyFighter.enemyName,
-                amount: result.modifiedDamage);
+                ApplyPoisonToEnemy(result.poisonDamage, result.poisonDuration, skill);
+
+            }
+
+
+
+            return skillTriggered;
 
         }
 
 
+        /// <summary>
+        /// Clears poison DoT when a new wave enemy spawns.
+        /// </summary>
+        private void ResetEnemyPoisonState()
+        {
+            _enemyIsPoisoned = false;
+            _enemyPoisonDamage = 0;
+            _enemyPoisonTurnsRemaining = 0;
+            _enemyPoisonSourceSkill = null;
+        }
+
+        /// <summary>
+        /// Starts or refreshes poison on the current enemy (weapon or mount poison skill).
+        /// </summary>
+        private void ApplyPoisonToEnemy(int damage, int turnsRemaining, EquipmentSkill sourceSkill)
+        {
+            _enemyIsPoisoned = true;
+            _enemyPoisonDamage = damage;
+            _enemyPoisonTurnsRemaining = turnsRemaining;
+            _enemyPoisonSourceSkill = sourceSkill;
+        }
+
+        /// <summary>
+        /// DoT tick at the start of the enemy turn — runs after burn each enemy turn.
+        /// Deals poison damage, logs it, then counts down duration. When turns hit 0, poison ends.
+        /// </summary>
+        private void ProcessEnemyPoisonAtTurnStart()
+        {
+            if (!_enemyIsPoisoned || _enemyPoisonTurnsRemaining <= 0)
+            {
+                return;
+            }
+
+            _enemyFighter.TakeDamage(_enemyPoisonDamage);
+            UpdateEnemyHealthDisplay();
+
+            RaiseCombatEvent(
+                CombatEventType.DamageDealt,
+                $"Poison dealt {_enemyPoisonDamage} damage!",
+                sourceName: GetSkillDisplayName(_enemyPoisonSourceSkill),
+                targetName: _enemyFighter.enemyName,
+                amount: _enemyPoisonDamage);
+
+            _enemyPoisonTurnsRemaining--;
+
+            if (_enemyPoisonTurnsRemaining <= 0)
+            {
+                _enemyIsPoisoned = false;
+                RaiseCombatEvent(
+                    CombatEventType.SkillTriggered,
+                    "Poison faded.",
+                    sourceName: GetSkillDisplayName(_enemyPoisonSourceSkill),
+                    targetName: _enemyFighter.enemyName);
+            }
+        }
 
         /// <summary>
         /// Clears burn DoT when a new wave enemy spawns.
@@ -1320,7 +1450,8 @@ namespace Crownsfall.Combat
 
         /// Logs equipped skill names at battle start for debugging.
 
-        /// v1 applies Critical Strike and Burn from the weapon; other skills are data-only for now.
+        /// v1 applies Critical Strike and Burn from the weapon, Poison from weapon or mount;
+        /// other skills are data-only for now.
 
         /// </summary>
 

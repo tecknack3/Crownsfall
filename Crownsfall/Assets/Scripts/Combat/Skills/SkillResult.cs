@@ -22,5 +22,14 @@ namespace Crownsfall.Combat.Skills
 
         /// <summary>How many enemy turns the burn lasts (one tick per enemy turn).</summary>
         public int burnDuration;
+
+        /// <summary>When true, BattleManager applies poison DoT using poisonDamage and poisonDuration.</summary>
+        public bool applyPoison;
+
+        /// <summary>Damage dealt to the enemy at the start of each enemy turn while poisoned.</summary>
+        public int poisonDamage;
+
+        /// <summary>How many enemy turns the poison lasts (one tick per enemy turn).</summary>
+        public int poisonDuration;
     }
 }

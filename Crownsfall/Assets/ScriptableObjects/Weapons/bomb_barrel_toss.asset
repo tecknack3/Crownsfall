@@ -25,8 +25,8 @@ MonoBehaviour:
   purchaseCost: 0
   description: 
   skill:
-    skillType: 7
-    skillName: Burn
+    skillType: 8
+    skillName: Poison
     description: 
     value: 5
     chance: 100
