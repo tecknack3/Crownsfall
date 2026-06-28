@@ -165,6 +165,24 @@ namespace Crownsfall.Combat
 
 
 
+        [Tooltip("How long the defeated fighter rig shrinks toward zero scale on death.")]
+
+        public float deathShrinkDuration = 0.35f;
+
+
+
+        [Tooltip("How long the defeated fighter rig fades out (CanvasGroup alpha) on death.")]
+
+        public float deathFadeDuration = 0.35f;
+
+
+
+        [Tooltip("How long the enemy rig fades back in after the next wave spawns.")]
+
+        public float respawnFadeDuration = 0.25f;
+
+
+
         [Header("Debug (Editor Testing Only)")]
 
         [Tooltip("Editor testing only for boss waves. Should be disabled before release.")]
@@ -291,6 +309,26 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
+        /// UI localScale of the player rig at battle start (includes facing flip from SetFacing).
+
+        /// </summary>
+
+        private Vector3 playerOriginalScale = Vector3.one;
+
+
+
+        /// <summary>
+
+        /// UI localScale of the enemy rig at battle start (includes facing flip from SetFacing).
+
+        /// </summary>
+
+        private Vector3 enemyOriginalScale = Vector3.one;
+
+
+
+        /// <summary>
+
         /// Runs when the battle scene starts. Builds fighters, displays rigs, fills HUD,
 
         /// then schedules auto-combat after a short delay.
@@ -331,6 +369,8 @@ namespace Crownsfall.Combat
             DisplayFighters();
 
             CaptureFighterHomePositions();
+
+            CaptureFighterOriginalScales();
 
             PopulateBattleUI();
 
@@ -491,7 +531,7 @@ namespace Crownsfall.Combat
 
                     {
 
-                        HandlePlayerDefeated();
+                        yield return HandlePlayerDefeated();
 
                         yield break;
 
@@ -651,6 +691,18 @@ namespace Crownsfall.Combat
 
 
 
+            // Shrink + fade the defeated enemy rig before spawning the next wave.
+
+            yield return AnimateFighterDeath(
+
+                GetRigTransform(enemyFighterRig),
+
+                GetOrAddCanvasGroup(enemyFighterRig != null ? enemyFighterRig.gameObject : null),
+
+                enemyOriginalScale);
+
+
+
             yield return new WaitForSeconds(waveTransitionDelay);
 
 
@@ -677,6 +729,20 @@ namespace Crownsfall.Combat
 
             DisplayEnemyFighter();
 
+
+
+            // Restore scale/alpha so the new enemy appears at full size.
+
+            yield return ResetFighterForRespawn(
+
+                GetRigTransform(enemyFighterRig),
+
+                GetOrAddCanvasGroup(enemyFighterRig != null ? enemyFighterRig.gameObject : null),
+
+                enemyOriginalScale);
+
+
+
             CaptureEnemyHomePosition();
 
 
@@ -690,13 +756,25 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Called when the player reaches 0 HP. Stops combat and shows the final score.
+        /// Called when the player reaches 0 HP. Plays death animation, then stops combat and shows game over.
 
         /// </summary>
 
-        private void HandlePlayerDefeated()
+        private IEnumerator HandlePlayerDefeated()
 
         {
+
+            // Shrink + fade the player rig before the game over panel covers the battlefield.
+
+            yield return AnimateFighterDeath(
+
+                GetRigTransform(playerFighterRig),
+
+                GetOrAddCanvasGroup(playerFighterRig != null ? playerFighterRig.gameObject : null),
+
+                playerOriginalScale);
+
+
 
             _combatRunning = false;
 
@@ -756,6 +834,82 @@ namespace Crownsfall.Combat
                     saveData.highestWave);
 
             }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Saves each fighter rig's current UI scale as the rest size for death/respawn animations.
+
+        /// Called after rigs are displayed at battle start (SetFacing has already run).
+
+        /// </summary>
+
+        private void CaptureFighterOriginalScales()
+
+        {
+
+            CapturePlayerOriginalScale();
+
+            CaptureEnemyOriginalScale();
+
+        }
+
+
+
+        /// <summary>
+
+        /// Stores the player rig's localScale so death animation can shrink from here and reset later.
+
+        /// </summary>
+
+        private void CapturePlayerOriginalScale()
+
+        {
+
+            var playerTransform = GetRigTransform(playerFighterRig);
+
+            if (playerTransform == null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            playerOriginalScale = playerTransform.localScale;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Stores the enemy rig's localScale so death animation can shrink from here and reset on respawn.
+
+        /// </summary>
+
+        private void CaptureEnemyOriginalScale()
+
+        {
+
+            var enemyTransform = GetRigTransform(enemyFighterRig);
+
+            if (enemyTransform == null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            enemyOriginalScale = enemyTransform.localScale;
 
         }
 
@@ -986,6 +1140,250 @@ namespace Crownsfall.Combat
 
 
             target.localPosition = originalLocal;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Ensures a CanvasGroup exists on the rig root so alpha fade affects all child Images.
+
+        /// Adds one at runtime if the prefab does not already have it.
+
+        /// </summary>
+
+        private static CanvasGroup GetOrAddCanvasGroup(GameObject go)
+
+        {
+
+            if (go == null)
+
+            {
+
+                return null;
+
+            }
+
+
+
+            var canvasGroup = go.GetComponent<CanvasGroup>();
+
+            if (canvasGroup == null)
+
+            {
+
+                canvasGroup = go.AddComponent<CanvasGroup>();
+
+            }
+
+
+
+            return canvasGroup;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Death animation: shrink localScale toward 0.1 and fade CanvasGroup alpha to 0.
+
+        /// Shrink and fade run in parallel (each uses its own duration from Inspector settings).
+
+        /// </summary>
+
+        private IEnumerator AnimateFighterDeath(Transform rig, CanvasGroup canvasGroup, Vector3 originalScale)
+
+        {
+
+            if (rig == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var targetScale = Vector3.one * 0.1f;
+
+            var totalDuration = Mathf.Max(deathShrinkDuration, deathFadeDuration);
+
+
+
+            if (totalDuration <= 0f)
+
+            {
+
+                rig.localScale = targetScale;
+
+                if (canvasGroup != null)
+
+                {
+
+                    canvasGroup.alpha = 0f;
+
+                }
+
+
+
+                yield break;
+
+            }
+
+
+
+            var startAlpha = canvasGroup != null ? canvasGroup.alpha : 1f;
+
+            var elapsed = 0f;
+
+
+
+            while (elapsed < totalDuration)
+
+            {
+
+                elapsed += Time.deltaTime;
+
+
+
+                if (deathShrinkDuration > 0f)
+
+                {
+
+                    var shrinkT = Mathf.Clamp01(elapsed / deathShrinkDuration);
+
+                    rig.localScale = Vector3.Lerp(originalScale, targetScale, shrinkT);
+
+                }
+
+                else
+
+                {
+
+                    rig.localScale = targetScale;
+
+                }
+
+
+
+                if (canvasGroup != null)
+
+                {
+
+                    if (deathFadeDuration > 0f)
+
+                    {
+
+                        var fadeT = Mathf.Clamp01(elapsed / deathFadeDuration);
+
+                        canvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, fadeT);
+
+                    }
+
+                    else
+
+                    {
+
+                        canvasGroup.alpha = 0f;
+
+                    }
+
+                }
+
+
+
+                yield return null;
+
+            }
+
+
+
+            rig.localScale = targetScale;
+
+            if (canvasGroup != null)
+
+            {
+
+                canvasGroup.alpha = 0f;
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Respawn animation: snap scale back to original, then fade CanvasGroup alpha from 0 to 1.
+
+        /// Called after DisplayEnemyFighter updates sprites for the next wave.
+
+        /// </summary>
+
+        private IEnumerator ResetFighterForRespawn(Transform rig, CanvasGroup canvasGroup, Vector3 originalScale)
+
+        {
+
+            if (rig == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            rig.localScale = originalScale;
+
+
+
+            if (canvasGroup == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            if (respawnFadeDuration <= 0f)
+
+            {
+
+                canvasGroup.alpha = 1f;
+
+                yield break;
+
+            }
+
+
+
+            canvasGroup.alpha = 0f;
+
+            var elapsed = 0f;
+
+
+
+            while (elapsed < respawnFadeDuration)
+
+            {
+
+                elapsed += Time.deltaTime;
+
+                canvasGroup.alpha = Mathf.Clamp01(elapsed / respawnFadeDuration);
+
+                yield return null;
+
+            }
+
+
+
+            canvasGroup.alpha = 1f;
 
         }
 
