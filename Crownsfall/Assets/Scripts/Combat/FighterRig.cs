@@ -20,6 +20,7 @@ namespace Crownsfall.Combat
     /// │   └── BodyImage
     /// ├── WeaponAnchor
     /// │   └── WeaponImage
+    /// ├── LegAnchor                       ← optional; punch kick animation extends this toward the target
     /// ├── HeadAnchor
     /// │   └── HeadImage
     /// ├── CrownAnchor                     ← optional crown above the head
@@ -34,6 +35,7 @@ namespace Crownsfall.Combat
         [SerializeField] private RectTransform mountAnchor;
         [SerializeField] private RectTransform bodyAnchor;
         [SerializeField] private RectTransform weaponAnchor;
+        [SerializeField] private RectTransform legAnchor;
         [SerializeField] private RectTransform headAnchor;
         [SerializeField] private RectTransform crownAnchor;
 
@@ -60,6 +62,16 @@ namespace Crownsfall.Combat
         /// </summary>
         public RectTransform DamageAnchor => damageAnchor;
 
+        /// <summary>
+        /// Weapon equipment anchor — parent of WeaponImage; battle punch animation extends this toward the target.
+        /// </summary>
+        public RectTransform WeaponAnchor => weaponAnchor;
+
+        /// <summary>
+        /// Leg anchor — parent for an optional foot/leg sprite; battle punch animation extends this toward the target.
+        /// </summary>
+        public RectTransform LegAnchor => legAnchor;
+
         [Header("Layer Offsets (anchoredPosition on each anchor, in UI pixels)")]
         [Tooltip("How far the mount sits below the body center.")]
         public Vector2 mountOffset = new Vector2(0f, -80f);
@@ -69,6 +81,9 @@ namespace Crownsfall.Combat
 
         [Tooltip("Weapon offset to the side of the body.")]
         public Vector2 weaponOffset = new Vector2(45f, 10f);
+
+        [Tooltip("Leg/foot anchor — forward and below body center for kick presentation.")]
+        public Vector2 legOffset = new Vector2(30f, -65f);
 
         [Tooltip("Head sits above the body.")]
         public Vector2 headOffset = new Vector2(0f, 75f);
@@ -89,10 +104,35 @@ namespace Crownsfall.Combat
         /// </summary>
         private Coroutine _flashCoroutine;
 
+        [Header("Idle Presentation")]
+        [Tooltip("Vertical bob amplitude on the rig root while idle (UI pixels).")]
+        [SerializeField] private float idleBreathBobPixels = 2f;
+
+        [Tooltip("Seconds for one full idle breath cycle.")]
+        [SerializeField] private float idleBreathPeriodSeconds = 2.5f;
+
+        [Tooltip("Subtle uniform scale pulse amplitude while idle (fraction of rest scale).")]
+        [SerializeField] private float idleBreathScaleAmplitude = 0.015f;
+
         /// <summary>
         /// Rest scale captured when a scale punch starts (preserves facing flip on X).
         /// </summary>
         private Vector3 _scalePunchRestScale = Vector3.one;
+
+        /// <summary>
+        /// Running idle breath loop; stopped during attacks and presentation overlays.
+        /// </summary>
+        private Coroutine _idleBreathCoroutine;
+
+        /// <summary>
+        /// Anchored position to restore when idle breath stops.
+        /// </summary>
+        private Vector2 _idleBreathRestAnchored;
+
+        /// <summary>
+        /// Local scale to restore when idle breath stops.
+        /// </summary>
+        private Vector3 _idleBreathRestScale = Vector3.one;
 
         /// <summary>
         /// Images flashed during the current/restarted hit reaction.
@@ -242,6 +282,58 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
+        /// Sets the rest pose idle breath loops around. Call after combat snaps the rig home.
+        /// </summary>
+        public void SetIdleBreathRestPose(Vector2 anchoredPosition, Vector3 localScale)
+        {
+            _idleBreathRestAnchored = anchoredPosition;
+            _idleBreathRestScale = localScale;
+        }
+
+        /// <summary>
+        /// Starts a subtle vertical bob and scale pulse on the rig root. No-op if already running.
+        /// </summary>
+        public void StartIdleBreath()
+        {
+            if (_idleBreathCoroutine != null)
+            {
+                return;
+            }
+
+            var rigRect = transform as RectTransform;
+            if (rigRect == null || idleBreathPeriodSeconds <= 0f)
+            {
+                return;
+            }
+
+            if (_idleBreathRestScale == Vector3.zero)
+            {
+                _idleBreathRestScale = transform.localScale;
+            }
+
+            if (_idleBreathRestAnchored == Vector2.zero && rigRect.anchoredPosition != Vector2.zero)
+            {
+                _idleBreathRestAnchored = rigRect.anchoredPosition;
+            }
+
+            _idleBreathCoroutine = StartCoroutine(IdleBreathRoutine(rigRect));
+        }
+
+        /// <summary>
+        /// Stops idle breath and restores the cached rest pose.
+        /// </summary>
+        public void StopIdleBreath()
+        {
+            if (_idleBreathCoroutine != null)
+            {
+                StopCoroutine(_idleBreathCoroutine);
+                _idleBreathCoroutine = null;
+            }
+
+            RestoreIdleBreathRestPose();
+        }
+
+        /// <summary>
         /// Brief scale pop on the rig root (e.g. enemy squashes outward on a crit).
         /// Multiplies current localScale uniformly so facing flip on X is preserved.
         /// </summary>
@@ -288,6 +380,7 @@ namespace Crownsfall.Combat
             SetAnchorPosition(mountAnchor, mountOffset);
             SetAnchorPosition(bodyAnchor, bodyOffset);
             SetAnchorPosition(weaponAnchor, weaponOffset);
+            SetAnchorPosition(legAnchor, legOffset);
             SetAnchorPosition(headAnchor, headOffset);
             SetAnchorPosition(crownAnchor, crownOffset);
         }
@@ -402,6 +495,44 @@ namespace Crownsfall.Combat
             {
                 _flashOriginalColors[i] = _flashImages[i].color;
             }
+        }
+
+        /// <summary>
+        /// Subtle idle loop — vertical bob plus tiny scale pulse on the rig root.
+        /// </summary>
+        private IEnumerator IdleBreathRoutine(RectTransform rigRect)
+        {
+            var elapsed = 0f;
+
+            while (true)
+            {
+                elapsed += Time.deltaTime;
+                var phase = Mathf.Sin(elapsed * (Mathf.PI * 2f / idleBreathPeriodSeconds));
+
+                if (rigRect != null)
+                {
+                    rigRect.anchoredPosition = _idleBreathRestAnchored + new Vector2(0f, phase * idleBreathBobPixels);
+                }
+
+                var scaleMultiplier = 1f + phase * idleBreathScaleAmplitude;
+                transform.localScale = _idleBreathRestScale * scaleMultiplier;
+
+                yield return null;
+            }
+        }
+
+        /// <summary>
+        /// Snaps rig root back to the pose captured when idle breath started or was last refreshed.
+        /// </summary>
+        private void RestoreIdleBreathRestPose()
+        {
+            var rigRect = transform as RectTransform;
+            if (rigRect != null)
+            {
+                rigRect.anchoredPosition = _idleBreathRestAnchored;
+            }
+
+            transform.localScale = _idleBreathRestScale;
         }
 
         /// <summary>

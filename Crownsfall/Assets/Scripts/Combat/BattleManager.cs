@@ -73,6 +73,8 @@ namespace Crownsfall.Combat
 
 
 
+
+
         [Header("Testing (used when no session data)")]
 
         [Tooltip("Fighter name used when playing Battle scene directly without Character Builder.")]
@@ -110,6 +112,10 @@ namespace Crownsfall.Combat
         [Tooltip("Tint applied to enemy UI layers. Stronger red = easier to spot on mobile.")]
 
         [SerializeField] private Color enemyTint = new Color(1f, 0.32f, 0.32f, 1f);
+
+        [Tooltip("When true, enemy rig mirrors the player's equipment sprites (still tinted). On by default so wave 1 is visible before enemy gear lists are wired.")]
+
+        [SerializeField] private bool enemyMirrorPlayerAppearance = true;
 
 
 
@@ -173,6 +179,94 @@ namespace Crownsfall.Combat
 
 
 
+        [Tooltip("How far the player moves during the wind-up before the punch (fraction of gap between home positions).")]
+
+        public float playerPunchApproachPercent = 0.10f;
+
+
+
+        [Tooltip("How far toward the enemy the player root steps before the punch/kick (fraction of gap between home positions in shared battle space).")]
+
+        public float playerAttackStepForwardPercent = 0.15f;
+
+
+
+        [Tooltip("Seconds for the player root to step forward toward the enemy before the punch/kick.")]
+
+        public float playerAttackStepForwardDuration = 0.12f;
+
+
+
+        [Tooltip("Seconds for the player root to step back to home after damage is applied.")]
+
+        public float playerAttackStepBackDuration = 0.25f;
+
+
+
+        [Tooltip("Fraction of attackMoveDuration spent on the fast jab snap; remainder is the slow approach wind-up.")]
+
+        [Range(0.05f, 0.25f)]
+
+        public float playerPunchSnapDurationRatio = 0.12f;
+
+
+
+        [Tooltip("Peak uniform scale on the player rig during the jab snap (1 = no scale bump).")]
+
+        public float playerPunchScalePeak = 1.08f;
+
+
+
+        [Tooltip("Brief Z rotation in degrees during the jab snap (0 = none). Sign follows facing.")]
+
+        public float playerPunchRotationDegrees = 0f;
+
+
+
+        [Tooltip("How far the weapon anchor extends forward (local +X px) during the jab snap.")]
+
+        public float playerPunchWeaponExtendPixels = 100f;
+
+
+
+        [Tooltip("How far the leg anchor extends forward (local +X px) during the jab snap.")]
+
+        public float playerPunchLegExtendPixels = 85f;
+
+
+
+        [Tooltip("Fraction of attackMoveDuration used for the weapon jab before the leg kick begins.")]
+
+        [Range(0.35f, 0.65f)]
+
+        public float playerPunchWeaponMoveFraction = 0.55f;
+
+
+
+        [Tooltip("Fraction of attackHoldDuration to hold the weapon extended after the jab snap.")]
+
+        [Range(0.1f, 0.6f)]
+
+        public float playerPunchWeaponHoldFraction = 0.35f;
+
+
+
+        [Tooltip("Fraction of attackHoldDuration to pause (weapon retracts) before the leg wind-up.")]
+
+        [Range(0f, 0.4f)]
+
+        public float playerPunchLegDelayAfterWeaponSnap = 0.15f;
+
+
+
+        [Tooltip("Scales how far the rig root moves during the player punch (body stays relatively stable).")]
+
+        [Range(0.1f, 1f)]
+
+        public float playerPunchRootDistanceMultiplier = 0.35f;
+
+
+
         [Tooltip("Total time the defender shakes left/right after taking attack damage.")]
 
         public float hitShakeDuration = 0.18f;
@@ -200,6 +294,80 @@ namespace Crownsfall.Combat
         [Tooltip("How long the defeated fighter rig fades out (CanvasGroup alpha) on death.")]
 
         public float deathFadeDuration = 0.35f;
+
+
+
+        [Tooltip("Z tilt in degrees during the brief defeat pose before shrink/fade.")]
+
+        public float deathTiltDegrees = 12f;
+
+
+
+        [Tooltip("Seconds for the defeat tilt/fall pose before shrink/fade begins.")]
+
+        public float deathTiltDuration = 0.2f;
+
+
+
+        [Tooltip("Probability (0–1) that an attack uses a kick instead of a punch when LegAnchor exists.")]
+
+        [Range(0f, 1f)]
+
+        public float attackKickProbability = 0.3f;
+
+
+
+        [Tooltip("How far the defender recoils backward (shared battle space pixels) when hit.")]
+
+        public float hitRecoilDistance = 14f;
+
+
+
+        [Tooltip("Seconds for the defender hit recoil and return.")]
+
+        public float hitRecoilDuration = 0.14f;
+
+
+
+        [Tooltip("Optional Z rotation in degrees during hit recoil (0 = none).")]
+
+        public float hitRecoilRotationDegrees = 4f;
+
+
+
+        [Tooltip("Peak uniform scale multiplier during hit recoil bounce (1 = none).")]
+
+        public float hitRecoilScalePeak = 1.04f;
+
+
+
+        [Tooltip("Y-scale multiplier at hit recoil peak for subtle squash (1 = no squash).")]
+
+        public float hitRecoilScaleYSquash = 0.97f;
+
+
+
+        [Tooltip("Brief hold at the stepped position before the strike snap (anticipation).")]
+
+        public float attackAnticipationDuration = 0.05f;
+
+
+
+        [Tooltip("Real-time impact pause after strike lands — visual only; does not freeze UI or Time.timeScale.")]
+
+        public float hitStopDuration = 0.05f;
+
+
+
+        [Tooltip("Small backward knockback distance before defeat tilt (UI pixels).")]
+
+        public float deathPreRecoilDistance = 6f;
+
+
+
+        [Tooltip("Duration of the pre-defeat knockback before fall/tilt.")]
+
+        public float deathPreRecoilDuration = 0.08f;
 
 
 
@@ -383,6 +551,15 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
+        /// Observes combat events and wave rewards for the post-victory summary screen.
+
+        /// </summary>
+
+
+
+
+        /// <summary>
+
         /// Highest wave number reached this run (updates when a wave is cleared or on death).
 
         /// </summary>
@@ -438,6 +615,24 @@ namespace Crownsfall.Combat
         /// </summary>
 
         private bool _victoryAnimationPlayed;
+
+
+
+        /// <summary>
+        /// Punch or kick — one strike type per attack (never both).
+        /// </summary>
+        private enum AttackStrikeType
+        {
+            Punch,
+            Kick
+        }
+
+
+
+        /// <summary>
+        /// Guards against overlapping attack presentation coroutines corrupting rig transforms.
+        /// </summary>
+        private bool _attackPresentationRunning;
 
 
 
@@ -603,11 +798,9 @@ namespace Crownsfall.Combat
                     }
 
 
-
-                    // --- Player turn: lunge toward enemy, then apply damage ---
+                    // --- Player turn: punch toward enemy, then apply damage ---
 
                     yield return PerformPlayerAttackWithAnimation();
-
 
 
                     if (!_enemyFighter.isAlive)
@@ -790,6 +983,8 @@ namespace Crownsfall.Combat
 
             _combatPaused = true;
 
+            StopFighterIdleBreath();
+
 
 
             var balance = CombatBalance.Active;
@@ -907,10 +1102,6 @@ namespace Crownsfall.Combat
 
             yield return RunWavePresentationSequence(notifyWaveStarted: true, logWaveTransition: true);
 
-
-
-            _combatPaused = false;
-
         }
 
 
@@ -987,7 +1178,10 @@ namespace Crownsfall.Combat
 
         {
 
-            Debug.Log("Playing Victory Animation");
+
+
+
+            StopFighterIdleBreath();
 
 
 
@@ -1386,7 +1580,9 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Player turn wrapper: compute crit before lunge, play animation, apply damage, then defender reacts.
+        /// Player turn wrapper: compute crit before animation, step forward and strike, apply damage,
+
+        /// defender reacts, then step back to idle.
 
         /// </summary>
 
@@ -1394,7 +1590,9 @@ namespace Crownsfall.Combat
 
         {
 
-            if (_combatPaused)
+
+
+            if (_combatPaused || _attackPresentationRunning)
 
             {
 
@@ -1404,33 +1602,125 @@ namespace Crownsfall.Combat
 
 
 
-            // Skills run before the lunge so crit can boost lunge distance for that swing only.
+            _attackPresentationRunning = true;
+
+            StopFighterIdleBreath();
+
+
+
+            var attackWave = _waveNumber;
+
+
+
+            // Skills run before the punch so crit can boost punch reach for that swing only.
 
             var attackOutcome = ComputePlayerAttackOutcome();
 
 
 
-            const float critLungeMultiplier = 1.2f;
+            const float critPunchReachMultiplier = 1.2f;
 
-            const float critShakeMultiplier = 1.5f;
+            const float critRecoilMultiplier = 1.5f;
 
-            var lungeDistanceMultiplier = attackOutcome.isCritical ? critLungeMultiplier : 1f;
+            var punchReachMultiplier = attackOutcome.isCritical ? critPunchReachMultiplier : 1f;
 
 
 
-            yield return AnimateAttackLunge(
+            var stepPosition = ComputeAttackStepPosition(
 
                 playerFighterRig,
+
+                enemyFighterRig,
 
                 playerHomePosition,
 
                 enemyHomePosition,
 
-                lungeDistanceMultiplier);
+                playerAttackStepForwardPercent,
+
+                punchReachMultiplier);
+
+
+
+            var strikeType = RollAttackStrikeType(playerFighterRig);
+
+
+
+            // Idle → step forward → punch OR kick (root holds at step position).
+
+            yield return AnimateAttackStrikeSequence(
+
+                playerFighterRig,
+
+                playerHomePosition,
+
+                stepPosition,
+
+                playerOriginalScale,
+
+                punchReachMultiplier,
+
+                strikeType);
+
+
+
+            if (_combatPaused || !_combatRunning || attackWave != _waveNumber || _enemyFighter == null || !_enemyFighter.isAlive)
+
+            {
+
+                _attackPresentationRunning = false;
+
+                yield break;
+
+            }
+
+
 
 
 
             ApplyPlayerAttackOutcome(attackOutcome);
+
+
+
+
+
+            if (_combatPaused || !_combatRunning || attackWave != _waveNumber || _enemyFighter == null || !_enemyFighter.isAlive)
+
+            {
+
+                _attackPresentationRunning = false;
+
+                yield break;
+
+            }
+
+
+
+            yield return AnimateHitRecoil(
+
+                enemyFighterRig,
+
+                enemyHomePosition,
+
+                playerHomePosition,
+
+                playerFighterRig,
+
+                enemyOriginalScale,
+
+                attackOutcome.isCritical ? critRecoilMultiplier : 1f);
+
+
+
+            if (_combatPaused || !_combatRunning || attackWave != _waveNumber)
+
+            {
+
+                _attackPresentationRunning = false;
+
+                yield break;
+
+            }
 
 
 
@@ -1446,8 +1736,6 @@ namespace Crownsfall.Combat
 
                     yield return enemyFighterRig.ScalePunch();
 
-                    yield return ShakeHitReaction(GetRigTransform(enemyFighterRig), critShakeMultiplier);
-
                 }
 
                 else
@@ -1456,11 +1744,45 @@ namespace Crownsfall.Combat
 
                     enemyFighterRig.FlashDamage();
 
-                    yield return ShakeHitReaction(GetRigTransform(enemyFighterRig));
-
                 }
 
             }
+
+
+
+            yield return AnimateAttackStrikeRecover(
+
+                playerFighterRig,
+
+                stepPosition,
+
+                playerOriginalScale,
+
+                punchReachMultiplier,
+
+                strikeType);
+
+
+
+            // Step back → idle at home.
+
+            yield return AnimateAttackStepBack(
+
+                playerFighterRig,
+
+                playerHomePosition,
+
+                stepPosition,
+
+                playerOriginalScale,
+
+                playerAttackStepBackDuration);
+
+
+
+            _attackPresentationRunning = false;
+
+            StartFighterIdleBreath();
 
         }
 
@@ -1476,7 +1798,7 @@ namespace Crownsfall.Combat
 
         {
 
-            if (_combatPaused)
+            if (_combatPaused || _attackPresentationRunning)
 
             {
 
@@ -1486,17 +1808,139 @@ namespace Crownsfall.Combat
 
 
 
-            yield return AnimateAttackLunge(enemyFighterRig, enemyHomePosition, playerHomePosition);
+            _attackPresentationRunning = true;
+
+            StopFighterIdleBreath();
+
+
+
+            var attackWave = _waveNumber;
+
+
+
+            var stepPosition = ComputeAttackStepPosition(
+
+                enemyFighterRig,
+
+                playerFighterRig,
+
+                enemyHomePosition,
+
+                playerHomePosition,
+
+                playerAttackStepForwardPercent,
+
+                1f);
+
+
+
+            var strikeType = RollAttackStrikeType(enemyFighterRig);
+
+
+
+
+
+            yield return AnimateAttackStrikeSequence(
+
+                enemyFighterRig,
+
+                enemyHomePosition,
+
+                stepPosition,
+
+                enemyOriginalScale,
+
+                1f,
+
+                strikeType);
+
+
+
+            if (_combatPaused || !_combatRunning || attackWave != _waveNumber || _enemyFighter == null || !_enemyFighter.isAlive || _playerFighter == null || !_playerFighter.isAlive)
+
+            {
+
+                _attackPresentationRunning = false;
+
+                yield break;
+
+            }
+
+
 
             ApplyEnemyAttackDamage();
 
-            // Player rig shakes and flashes after enemy attack damage lands.
-            if (playerFighterRig != null)
+
+
+            yield return AnimateHitRecoil(
+
+                playerFighterRig,
+
+                playerHomePosition,
+
+                enemyHomePosition,
+
+                enemyFighterRig,
+
+                playerOriginalScale,
+
+                1f);
+
+
+
+            if (_combatPaused || !_combatRunning || attackWave != _waveNumber)
+
             {
-                playerFighterRig.FlashDamage();
+
+                _attackPresentationRunning = false;
+
+                yield break;
+
             }
 
-            yield return ShakeHitReaction(GetRigTransform(playerFighterRig));
+
+
+            if (playerFighterRig != null)
+
+            {
+
+                playerFighterRig.FlashDamage();
+
+            }
+
+
+
+            yield return AnimateAttackStrikeRecover(
+
+                enemyFighterRig,
+
+                stepPosition,
+
+                enemyOriginalScale,
+
+                1f,
+
+                strikeType);
+
+
+
+            yield return AnimateAttackStepBack(
+
+                enemyFighterRig,
+
+                enemyHomePosition,
+
+                stepPosition,
+
+                enemyOriginalScale,
+
+                playerAttackStepBackDuration);
+
+
+
+            _attackPresentationRunning = false;
+
+            StartFighterIdleBreath();
 
         }
 
@@ -1565,6 +2009,1539 @@ namespace Crownsfall.Combat
             // Guarantee exact rest position (avoids float drift from lerp).
 
             SetRectAnchoredPosition(attackerRect, home);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Attack presentation: step forward, then a single punch OR kick at the stepped position.
+
+        /// Root stays at the step point until <see cref="AnimateAttackStepBack"/> runs after damage.
+
+        /// </summary>
+
+        private IEnumerator AnimateAttackStrikeSequence(
+
+            FighterRig attackerRig,
+
+            Vector3 home,
+
+            Vector3 stepPosition,
+
+            Vector3 originalScale,
+
+            float distanceMultiplier,
+
+            AttackStrikeType strikeType)
+
+        {
+
+
+
+            var attackerRect = GetRigRectTransform(attackerRig);
+
+            if (attackerRect == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var attackerTransform = GetRigTransform(attackerRig);
+
+            var weaponRect = attackerRig != null ? attackerRig.WeaponAnchor : null;
+
+            var legRect = attackerRig != null ? attackerRig.LegAnchor : null;
+
+
+
+            if (strikeType == AttackStrikeType.Kick && legRect == null)
+
+            {
+
+                strikeType = AttackStrikeType.Punch;
+
+            }
+
+
+
+            SetRectAnchoredPosition(attackerRect, home);
+
+
+
+            yield return LerpPlayerPunchPhase(
+
+                attackerRect,
+
+                attackerTransform,
+
+                home,
+
+                stepPosition,
+
+                originalScale,
+
+                originalScale,
+
+                GetRigUprightRotation(attackerTransform),
+
+                GetRigUprightRotation(attackerTransform),
+
+                playerAttackStepForwardDuration,
+
+                EaseOutQuad,
+
+                null);
+
+
+
+            if (attackAnticipationDuration > 0f)
+
+            {
+
+                SetRectAnchoredPosition(attackerRect, stepPosition);
+
+
+
+
+
+                yield return new WaitForSecondsRealtime(attackAnticipationDuration);
+
+            }
+
+
+
+            var restScale = originalScale;
+
+            var peakScale = restScale * playerPunchScalePeak;
+
+            var restRotation = GetRigUprightRotation(attackerTransform);
+
+            var facingSign = restScale.x >= 0f ? 1f : -1f;
+
+            var strikeRotation = restRotation + new Vector3(0f, 0f, -playerPunchRotationDegrees * facingSign);
+
+
+
+            var strikeMoveDuration = attackMoveDuration;
+
+            var snapDuration = strikeMoveDuration * playerPunchSnapDurationRatio;
+
+            var approachDuration = strikeMoveDuration - snapDuration;
+
+
+
+            if (strikeType == AttackStrikeType.Punch && weaponRect != null)
+
+            {
+
+                var weaponRestPos = weaponRect.anchoredPosition;
+
+                var weaponExtendedPos = weaponRestPos + new Vector2(playerPunchWeaponExtendPixels * distanceMultiplier, 0f);
+
+
+
+                yield return LerpPlayerPunchPhase(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    stepPosition,
+
+                    restScale,
+
+                    restScale,
+
+                    restRotation,
+
+                    restRotation,
+
+                    approachDuration,
+
+                    EaseInQuad,
+
+                    weaponRect,
+
+                    weaponRestPos,
+
+                    weaponRestPos,
+
+                    null);
+
+
+
+                yield return LerpPlayerPunchPhase(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    stepPosition,
+
+                    restScale,
+
+                    peakScale,
+
+                    restRotation,
+
+                    strikeRotation,
+
+                    snapDuration,
+
+                    EaseOutQuad,
+
+                    weaponRect,
+
+                    weaponRestPos,
+
+                    weaponExtendedPos,
+
+                    null);
+
+
+
+                yield return HoldAttackImpactPose(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    peakScale,
+
+                    strikeRotation,
+
+                    weaponRect,
+
+                    weaponExtendedPos,
+
+                    null,
+
+                    default);
+
+            }
+
+            else if (strikeType == AttackStrikeType.Kick && legRect != null)
+
+            {
+
+                var legRestPos = legRect.anchoredPosition;
+
+                var legExtendedPos = legRestPos + new Vector2(playerPunchLegExtendPixels * distanceMultiplier, 0f);
+
+
+
+                yield return LerpPlayerPunchPhase(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    stepPosition,
+
+                    restScale,
+
+                    restScale,
+
+                    restRotation,
+
+                    restRotation,
+
+                    approachDuration,
+
+                    EaseInQuad,
+
+                    null,
+
+                    default,
+
+                    default,
+
+                    legRect,
+
+                    legRestPos,
+
+                    legRestPos);
+
+
+
+                yield return LerpPlayerPunchPhase(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    stepPosition,
+
+                    restScale,
+
+                    peakScale,
+
+                    restRotation,
+
+                    strikeRotation,
+
+                    snapDuration,
+
+                    EaseOutQuad,
+
+                    null,
+
+                    default,
+
+                    default,
+
+                    legRect,
+
+                    legRestPos,
+
+                    legExtendedPos);
+
+
+
+                yield return HoldAttackImpactPose(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    peakScale,
+
+                    strikeRotation,
+
+                    null,
+
+                    default,
+
+                    legRect,
+
+                    legExtendedPos);
+
+            }
+
+            else
+
+            {
+
+                yield return LerpPlayerPunchPhase(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    stepPosition,
+
+                    restScale,
+
+                    peakScale,
+
+                    restRotation,
+
+                    strikeRotation,
+
+                    snapDuration,
+
+                    EaseOutQuad,
+
+                    null);
+
+
+
+                yield return HoldAttackImpactPose(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    peakScale,
+
+                    strikeRotation,
+
+                    null,
+
+                    default,
+
+                    null,
+
+                    default);
+
+            }
+
+
+
+        }
+
+
+
+        /// <summary>
+
+        /// Real-time impact pause — freezes presentation pose only; UI and other coroutines keep running.
+
+        /// </summary>
+
+        private IEnumerator HoldAttackImpactPose(
+
+            RectTransform attackerRect,
+
+            Transform attackerTransform,
+
+            Vector3 stepPosition,
+
+            Vector3 peakScale,
+
+            Vector3 strikeRotation,
+
+            RectTransform weaponRect,
+
+            Vector2 weaponExtendedPos,
+
+            RectTransform legRect,
+
+            Vector2 legExtendedPos)
+
+        {
+
+            if (attackerRect != null)
+
+            {
+
+                SetRectAnchoredPosition(attackerRect, stepPosition);
+
+            }
+
+
+
+            if (attackerTransform != null)
+
+            {
+
+                attackerTransform.localScale = peakScale;
+
+                attackerTransform.localEulerAngles = strikeRotation;
+
+            }
+
+
+
+            if (weaponRect != null)
+
+            {
+
+                weaponRect.anchoredPosition = weaponExtendedPos;
+
+            }
+
+
+
+            if (legRect != null)
+
+            {
+
+                legRect.anchoredPosition = legExtendedPos;
+
+            }
+
+
+
+            if (hitStopDuration <= 0f)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+
+
+            yield return new WaitForSecondsRealtime(hitStopDuration);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Retracts the strike limb and settles attacker scale/rotation after impact and defender recoil.
+
+        /// </summary>
+
+        private IEnumerator AnimateAttackStrikeRecover(
+
+            FighterRig attackerRig,
+
+            Vector3 stepPosition,
+
+            Vector3 originalScale,
+
+            float distanceMultiplier,
+
+            AttackStrikeType strikeType)
+
+        {
+
+            var attackerRect = GetRigRectTransform(attackerRig);
+
+            if (attackerRect == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var attackerTransform = GetRigTransform(attackerRig);
+
+            var weaponRect = attackerRig != null ? attackerRig.WeaponAnchor : null;
+
+            var legRect = attackerRig != null ? attackerRig.LegAnchor : null;
+
+
+
+            if (strikeType == AttackStrikeType.Kick && legRect == null)
+
+            {
+
+                strikeType = AttackStrikeType.Punch;
+
+            }
+
+
+
+            var restScale = originalScale;
+
+            var peakScale = restScale * playerPunchScalePeak;
+
+            var restRotation = GetRigUprightRotation(attackerTransform);
+
+            var facingSign = restScale.x >= 0f ? 1f : -1f;
+
+            var strikeRotation = restRotation + new Vector3(0f, 0f, -playerPunchRotationDegrees * facingSign);
+
+            var strikeMoveDuration = attackMoveDuration;
+
+            var snapDuration = strikeMoveDuration * playerPunchSnapDurationRatio;
+
+            var settleDuration = Mathf.Max(snapDuration, attackHoldDuration * 0.35f);
+
+
+
+            if (strikeType == AttackStrikeType.Punch && weaponRect != null)
+
+            {
+
+                var weaponExtendedPos = weaponRect.anchoredPosition;
+
+                var weaponRestPos = weaponExtendedPos - new Vector2(playerPunchWeaponExtendPixels * distanceMultiplier, 0f);
+
+
+
+                yield return LerpPlayerPunchPhase(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    stepPosition,
+
+                    peakScale,
+
+                    restScale,
+
+                    strikeRotation,
+
+                    restRotation,
+
+                    settleDuration,
+
+                    EaseInOutQuad,
+
+                    weaponRect,
+
+                    weaponExtendedPos,
+
+                    weaponRestPos,
+
+                    null);
+
+            }
+
+            else if (strikeType == AttackStrikeType.Kick && legRect != null)
+
+            {
+
+                var legExtendedPos = legRect.anchoredPosition;
+
+                var legRestPos = legExtendedPos - new Vector2(playerPunchLegExtendPixels * distanceMultiplier, 0f);
+
+
+
+                yield return LerpPlayerPunchPhase(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    stepPosition,
+
+                    peakScale,
+
+                    restScale,
+
+                    strikeRotation,
+
+                    restRotation,
+
+                    settleDuration,
+
+                    EaseInOutQuad,
+
+                    null,
+
+                    default,
+
+                    default,
+
+                    legRect,
+
+                    legExtendedPos,
+
+                    legRestPos);
+
+            }
+
+            else if (attackerTransform != null)
+
+            {
+
+                yield return LerpPlayerPunchPhase(
+
+                    attackerRect,
+
+                    attackerTransform,
+
+                    stepPosition,
+
+                    stepPosition,
+
+                    peakScale,
+
+                    restScale,
+
+                    strikeRotation,
+
+                    restRotation,
+
+                    settleDuration,
+
+                    EaseInOutQuad,
+
+                    null);
+
+            }
+
+
+
+            SetRectAnchoredPosition(attackerRect, stepPosition);
+
+
+
+            if (attackerTransform != null)
+
+            {
+
+                attackerTransform.localScale = restScale;
+
+                attackerTransform.localEulerAngles = restRotation;
+
+            }
+
+
+
+            attackerRig?.ApplyOffsets();
+
+
+
+        }
+
+
+
+        /// <summary>
+
+        /// Slides the attacker root from the strike step point back to home and settles the rest pose.
+
+        /// </summary>
+
+        private IEnumerator AnimateAttackStepBack(
+
+            FighterRig attackerRig,
+
+            Vector3 home,
+
+            Vector3 stepPosition,
+
+            Vector3 originalScale,
+
+            float stepBackDuration)
+
+        {
+
+
+
+
+            var attackerRect = GetRigRectTransform(attackerRig);
+
+            if (attackerRect == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var attackerTransform = GetRigTransform(attackerRig);
+
+
+
+            yield return LerpPlayerPunchPhase(
+
+                attackerRect,
+
+                attackerTransform,
+
+                stepPosition,
+
+                home,
+
+                originalScale,
+
+                originalScale,
+
+                GetRigUprightRotation(attackerTransform),
+
+                GetRigUprightRotation(attackerTransform),
+
+                stepBackDuration,
+
+                EaseInOutQuad,
+
+                null);
+
+
+
+            SetRectAnchoredPosition(attackerRect, home);
+
+            if (attackerTransform != null)
+
+            {
+
+                attackerTransform.localScale = originalScale;
+
+                ResetRigUprightRotation(attackerTransform);
+
+            }
+
+
+
+        }
+
+
+
+        /// <summary>
+
+        /// Computes how far an attacker root steps toward a target in shared battle space.
+
+        /// </summary>
+
+        private Vector3 ComputeAttackStepPosition(
+
+            FighterRig attackerRig,
+
+            FighterRig targetRig,
+
+            Vector3 attackerHome,
+
+            Vector3 targetHome,
+
+            float stepPercent,
+
+            float distanceMultiplier = 1f)
+
+        {
+
+            var attackerRect = GetRigRectTransform(attackerRig);
+
+            var targetRect = GetRigRectTransform(targetRig);
+
+            if (attackerRect == null)
+
+            {
+
+                return attackerHome;
+
+            }
+
+
+
+            var effectivePercent = Mathf.Clamp01(stepPercent * distanceMultiplier);
+
+
+
+            if (targetRect == null || effectivePercent <= 0f)
+
+            {
+
+                return attackerHome;
+
+            }
+
+
+
+            var sharedParent = GetSharedRectTransformParent(attackerRect, targetRect);
+
+            if (sharedParent == null)
+
+            {
+
+                return attackerHome;
+
+            }
+
+
+
+            SetRectAnchoredPosition(attackerRect, attackerHome);
+
+            SetRectAnchoredPosition(targetRect, targetHome);
+
+
+
+            var startShared = SharedLocalFromWorld(sharedParent, attackerRect.position);
+
+            var endShared = SharedLocalFromWorld(sharedParent, targetRect.position);
+
+            var stepShared = new Vector3(
+
+                Mathf.Lerp(startShared.x, endShared.x, effectivePercent),
+
+                startShared.y,
+
+                0f);
+
+
+
+            var stepWorld = sharedParent.TransformPoint(stepShared);
+
+            var stepAnchored = RigAnchoredFromWorldPosition(attackerRect, stepWorld);
+
+
+
+            SetRectAnchoredPosition(attackerRect, attackerHome);
+
+
+
+            return stepAnchored;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Picks punch (default) or kick (alternate) for one strike per attack.
+
+        /// </summary>
+
+        private AttackStrikeType RollAttackStrikeType(FighterRig rig)
+
+        {
+
+            if (rig == null || rig.LegAnchor == null)
+
+            {
+
+                return AttackStrikeType.Punch;
+
+            }
+
+
+
+            return Random.value < attackKickProbability ? AttackStrikeType.Kick : AttackStrikeType.Punch;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Stops idle breath on both rigs before presentation animations that own transforms.
+
+        /// </summary>
+
+        private void StopFighterIdleBreath()
+
+        {
+
+            playerFighterRig?.StopIdleBreath();
+
+            enemyFighterRig?.StopIdleBreath();
+
+        }
+
+
+
+        /// <summary>
+
+        /// Refreshes idle breath rest poses from stored home positions and starts both rigs.
+
+        /// </summary>
+
+        private void StartFighterIdleBreath()
+
+        {
+
+            if (_combatPaused || !_combatRunning)
+
+            {
+
+                return;
+
+            }
+
+
+
+            SyncIdleBreathRestFromHomes();
+
+            playerFighterRig?.StartIdleBreath();
+
+            if (_enemyFighter != null && _enemyFighter.isAlive)
+
+            {
+
+                enemyFighterRig?.StartIdleBreath();
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Pushes current home anchored positions and scales into each rig's idle breath cache.
+
+        /// </summary>
+
+        private void SyncIdleBreathRestFromHomes()
+
+        {
+
+            if (playerFighterRig != null)
+
+            {
+
+                playerFighterRig.SetIdleBreathRestPose(
+
+                    new Vector2(playerHomePosition.x, playerHomePosition.y),
+
+                    playerOriginalScale);
+
+            }
+
+
+
+            if (enemyFighterRig != null)
+
+            {
+
+                enemyFighterRig.SetIdleBreathRestPose(
+
+                    new Vector2(enemyHomePosition.x, enemyHomePosition.y),
+
+                    enemyOriginalScale);
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Brief backward recoil on the defender in shared battle space, away from the attacker.
+
+        /// </summary>
+
+        private IEnumerator AnimateHitRecoil(
+
+            FighterRig defenderRig,
+
+            Vector3 defenderHome,
+
+            Vector3 attackerHome,
+
+            FighterRig attackerRig,
+
+            Vector3 defenderOriginalScale,
+
+            float strengthMultiplier = 1f)
+
+        {
+
+            var defenderRect = GetRigRectTransform(defenderRig);
+
+            var attackerRect = GetRigRectTransform(attackerRig);
+
+            var defenderTransform = GetRigTransform(defenderRig);
+
+
+
+            if (defenderRect == null || defenderTransform == null || hitRecoilDuration <= 0f)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            StopFighterIdleBreath();
+
+
+
+            var sharedParent = attackerRect != null
+
+                ? GetSharedRectTransformParent(defenderRect, attackerRect)
+
+                : null;
+
+
+
+            Vector3 recoilAnchored = defenderHome;
+
+
+
+            if (sharedParent != null && attackerRect != null)
+
+            {
+
+                SetRectAnchoredPosition(defenderRect, defenderHome);
+
+                SetRectAnchoredPosition(attackerRect, attackerHome);
+
+
+
+                var defenderShared = SharedLocalFromWorld(sharedParent, defenderRect.position);
+
+                var attackerShared = SharedLocalFromWorld(sharedParent, attackerRect.position);
+
+                var awayDir = defenderShared - attackerShared;
+
+                if (awayDir.sqrMagnitude > 0.0001f)
+
+                {
+
+                    awayDir.Normalize();
+
+                }
+
+                else
+
+                {
+
+                    awayDir = Vector3.right;
+
+                }
+
+
+
+                var recoilShared = defenderShared + awayDir * (hitRecoilDistance * strengthMultiplier);
+
+                var recoilWorld = sharedParent.TransformPoint(recoilShared);
+
+                recoilAnchored = RigAnchoredFromWorldPosition(defenderRect, recoilWorld);
+
+                SetRectAnchoredPosition(defenderRect, defenderHome);
+
+            }
+
+            else
+
+            {
+
+                var awayX = Mathf.Sign(defenderHome.x - attackerHome.x);
+
+                if (Mathf.Approximately(awayX, 0f))
+
+                {
+
+                    awayX = 1f;
+
+                }
+
+
+
+                recoilAnchored = defenderHome + new Vector3(awayX * hitRecoilDistance * strengthMultiplier, 0f, 0f);
+
+            }
+
+
+
+            var restRotation = GetRigUprightRotation(defenderTransform);
+
+            var facingSign = defenderOriginalScale.x >= 0f ? 1f : -1f;
+
+            var recoilRotation = restRotation + new Vector3(0f, 0f, hitRecoilRotationDegrees * facingSign);
+
+            var peakScale = new Vector3(
+
+                defenderOriginalScale.x * hitRecoilScalePeak,
+
+                defenderOriginalScale.y * hitRecoilScaleYSquash,
+
+                defenderOriginalScale.z);
+
+            var halfDuration = hitRecoilDuration * 0.5f;
+
+
+
+
+
+            yield return LerpPlayerPunchPhase(
+
+                defenderRect,
+
+                defenderTransform,
+
+                defenderHome,
+
+                recoilAnchored,
+
+                defenderOriginalScale,
+
+                peakScale,
+
+                restRotation,
+
+                recoilRotation,
+
+                halfDuration,
+
+                EaseOutQuad,
+
+                null);
+
+
+
+            yield return LerpPlayerPunchPhase(
+
+                defenderRect,
+
+                defenderTransform,
+
+                recoilAnchored,
+
+                defenderHome,
+
+                peakScale,
+
+                defenderOriginalScale,
+
+                recoilRotation,
+
+                restRotation,
+
+                halfDuration,
+
+                EaseInOutQuad,
+
+                null);
+
+
+
+            SetRectAnchoredPosition(defenderRect, defenderHome);
+
+            defenderTransform.localScale = defenderOriginalScale;
+
+            defenderTransform.localEulerAngles = restRotation;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Computes how far the player root steps toward the enemy (legacy wrapper).
+
+        /// </summary>
+
+        private Vector3 ComputePlayerAttackStepPosition(
+
+            FighterRig playerRig,
+
+            Vector3 playerHome,
+
+            Vector3 enemyHome,
+
+            float distanceMultiplier = 1f)
+
+        {
+
+            return ComputeAttackStepPosition(
+
+                playerRig,
+
+                enemyFighterRig,
+
+                playerHome,
+
+                enemyHome,
+
+                playerAttackStepForwardPercent,
+
+                distanceMultiplier);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Finds the lowest common RectTransform ancestor of two UI rigs (typically BattleArea).
+
+        /// </summary>
+
+        private static RectTransform GetSharedRectTransformParent(RectTransform a, RectTransform b)
+
+        {
+
+            if (a == null || b == null)
+
+            {
+
+                return null;
+
+            }
+
+
+
+            var ancestors = new System.Collections.Generic.HashSet<Transform>();
+
+            for (Transform t = a; t != null; t = t.parent)
+
+            {
+
+                ancestors.Add(t);
+
+            }
+
+
+
+            for (Transform t = b; t != null; t = t.parent)
+
+            {
+
+                if (ancestors.Contains(t) && t is RectTransform sharedRect)
+
+                {
+
+                    return sharedRect;
+
+                }
+
+            }
+
+
+
+            return null;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Converts a world-space pivot into local x/y within a shared battle parent.
+
+        /// </summary>
+
+        private static Vector3 SharedLocalFromWorld(RectTransform sharedParent, Vector3 worldPos)
+
+        {
+
+            var local = sharedParent.InverseTransformPoint(worldPos);
+
+            return new Vector3(local.x, local.y, 0f);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Resolves the rig anchoredPosition that places its pivot at a world-space point.
+
+        /// </summary>
+
+        private static Vector3 RigAnchoredFromWorldPosition(RectTransform rig, Vector3 worldPos)
+
+        {
+
+            rig.position = worldPos;
+
+            return RectAnchoredToVector3(rig);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Lerps player punch phase: rig anchoredPosition plus optional scale/rotation on the root,
+
+        /// and optional weapon- and leg-anchor local extension toward the target.
+
+        /// Pass null for weaponRect or legRect to skip animating that limb for the phase.
+
+        /// </summary>
+
+        private static IEnumerator LerpPlayerPunchPhase(
+
+            RectTransform rect,
+
+            Transform rigTransform,
+
+            Vector3 startPos,
+
+            Vector3 endPos,
+
+            Vector3 startScale,
+
+            Vector3 endScale,
+
+            Vector3 startRotation,
+
+            Vector3 endRotation,
+
+            float duration,
+
+            System.Func<float, float> ease,
+
+            RectTransform weaponRect = null,
+
+            Vector2 weaponStartPos = default,
+
+            Vector2 weaponEndPos = default,
+
+            RectTransform legRect = null,
+
+            Vector2 legStartPos = default,
+
+            Vector2 legEndPos = default)
+
+        {
+
+            if (rect == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            if (duration <= 0f)
+
+            {
+
+                SetRectAnchoredPosition(rect, endPos);
+
+
+
+                if (rigTransform != null)
+
+                {
+
+                    rigTransform.localScale = endScale;
+
+                    rigTransform.localEulerAngles = endRotation;
+
+                }
+
+
+
+                if (weaponRect != null)
+
+                {
+
+                    weaponRect.anchoredPosition = weaponEndPos;
+
+                }
+
+
+
+                if (legRect != null)
+
+                {
+
+                    legRect.anchoredPosition = legEndPos;
+
+                }
+
+
+
+                yield break;
+
+            }
+
+
+
+            var elapsed = 0f;
+
+
+
+            while (elapsed < duration)
+
+            {
+
+                elapsed += Time.deltaTime;
+
+                var t = ease(Mathf.Clamp01(elapsed / duration));
+
+
+
+                SetRectAnchoredPosition(rect, Vector3.Lerp(startPos, endPos, t));
+
+
+
+                if (rigTransform != null)
+
+                {
+
+                    rigTransform.localScale = Vector3.Lerp(startScale, endScale, t);
+
+                    rigTransform.localEulerAngles = Vector3.Lerp(startRotation, endRotation, t);
+
+                }
+
+
+
+                if (weaponRect != null)
+
+                {
+
+                    weaponRect.anchoredPosition = Vector2.Lerp(weaponStartPos, weaponEndPos, t);
+
+                }
+
+
+
+                if (legRect != null)
+
+                {
+
+                    legRect.anchoredPosition = Vector2.Lerp(legStartPos, legEndPos, t);
+
+                }
+
+
+
+                yield return null;
+
+            }
+
+
+
+            SetRectAnchoredPosition(rect, endPos);
+
+
+
+            if (rigTransform != null)
+
+            {
+
+                rigTransform.localScale = endScale;
+
+                rigTransform.localEulerAngles = endRotation;
+
+            }
+
+
+
+            if (weaponRect != null)
+
+            {
+
+                weaponRect.anchoredPosition = weaponEndPos;
+
+            }
+
+
+
+            if (legRect != null)
+
+            {
+
+                legRect.anchoredPosition = legEndPos;
+
+            }
+
+        }
+
+
+
+        private static float EaseInQuad(float t) => t * t;
+
+
+
+        private static float EaseOutQuad(float t)
+
+        {
+
+            var inv = 1f - t;
+
+            return 1f - inv * inv;
+
+        }
+
+
+
+        private static float EaseInOutQuad(float t)
+
+        {
+
+            return t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) * 0.5f;
 
         }
 
@@ -1688,6 +3665,110 @@ namespace Crownsfall.Combat
 
 
 
+            StopFighterIdleBreath();
+
+
+
+            var rigRect = rig as RectTransform;
+
+            var homeAnchored = rigRect != null ? RectAnchoredToVector3(rigRect) : Vector3.zero;
+
+            var restRotation = GetRigUprightRotation(rig);
+
+            var facingSign = originalScale.x >= 0f ? 1f : -1f;
+
+
+
+            if (rigRect != null && deathPreRecoilDuration > 0f && deathPreRecoilDistance > 0f)
+
+            {
+
+                var recoilAnchored = homeAnchored + new Vector3(-deathPreRecoilDistance * facingSign, -3f, 0f);
+
+                var recoilSquash = new Vector3(originalScale.x * 1.02f, originalScale.y * 0.96f, originalScale.z);
+
+
+
+
+
+                yield return LerpPlayerPunchPhase(
+
+                    rigRect,
+
+                    rig,
+
+                    homeAnchored,
+
+                    recoilAnchored,
+
+                    originalScale,
+
+                    recoilSquash,
+
+                    restRotation,
+
+                    restRotation,
+
+                    deathPreRecoilDuration,
+
+                    EaseOutQuad,
+
+                    null);
+
+
+
+                homeAnchored = recoilAnchored;
+
+            }
+
+
+
+            if (rigRect != null && deathTiltDuration > 0f)
+
+            {
+
+                var tiltRotation = restRotation + new Vector3(0f, 0f, deathTiltDegrees * facingSign);
+
+                var tiltAnchored = homeAnchored + new Vector3(0f, -8f, 0f);
+
+                var tiltStartScale = rig.localScale;
+
+
+
+
+
+                yield return LerpPlayerPunchPhase(
+
+                    rigRect,
+
+                    rig,
+
+                    homeAnchored,
+
+                    tiltAnchored,
+
+                    tiltStartScale,
+
+                    tiltStartScale * 0.95f,
+
+                    restRotation,
+
+                    tiltRotation,
+
+                    deathTiltDuration,
+
+                    EaseOutQuad,
+
+                    null);
+
+
+
+                ResetRigUprightRotation(rig);
+
+            }
+
+
+
             var targetScale = Vector3.one * 0.1f;
 
             var totalDuration = Mathf.Max(deathShrinkDuration, deathFadeDuration);
@@ -1708,7 +3789,7 @@ namespace Crownsfall.Combat
 
                 }
 
-
+                ResetRigUprightRotation(rig);
 
                 yield break;
 
@@ -1792,6 +3873,8 @@ namespace Crownsfall.Combat
 
             }
 
+            ResetRigUprightRotation(rig);
+
         }
 
 
@@ -1833,6 +3916,8 @@ namespace Crownsfall.Combat
 
 
             enemyTransform.localScale = enemyOriginalScale * startScaleMultiplier;
+
+            ResetRigUprightRotation(enemyTransform);
 
             if (canvasGroup != null)
 
@@ -1888,7 +3973,10 @@ namespace Crownsfall.Combat
 
             var isBoss = IsCurrentWaveBoss();
 
-            Debug.Log(isBoss ? "Boss Entrance Animation Started" : "Enemy Entrance Animation Started");
+
+
+
+            StopFighterIdleBreath();
 
 
 
@@ -1904,7 +3992,6 @@ namespace Crownsfall.Combat
 
             {
 
-                Debug.Log(isBoss ? "Boss Entrance Animation Finished" : "Enemy Entrance Animation Finished");
 
                 yield break;
 
@@ -1932,7 +4019,9 @@ namespace Crownsfall.Combat
 
 
 
-            // Always start from entrance pose — not from death shrink or previous alpha.
+            // Always start from entrance pose — not from death shrink, tilt, or previous alpha.
+
+            ResetRigUprightRotation(enemyTransform);
 
             enemyTransform.localScale = startScale;
 
@@ -1980,9 +4069,8 @@ namespace Crownsfall.Combat
 
                 }
 
+                ResetRigUprightRotation(enemyTransform);
 
-
-                Debug.Log(isBoss ? "Boss Entrance Animation Finished" : "Enemy Entrance Animation Finished");
 
                 yield break;
 
@@ -2060,7 +4148,7 @@ namespace Crownsfall.Combat
 
             yield return AnimateEntranceLandingBounce(enemyTransform, endScale, bounceOvershoot, 0.08f);
 
-
+            ResetRigUprightRotation(enemyTransform);
 
             if (isBoss)
 
@@ -2072,7 +4160,6 @@ namespace Crownsfall.Combat
 
 
 
-            Debug.Log(isBoss ? "Boss Entrance Animation Finished" : "Enemy Entrance Animation Finished");
 
         }
 
@@ -2275,6 +4362,48 @@ namespace Crownsfall.Combat
         {
 
             return rig != null ? rig.transform : null;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Canonical upright local rotation for fighter rigs (facing is handled via localScale.x flip).
+
+        /// </summary>
+
+        private static Vector3 GetRigUprightRotation(Transform rig)
+
+        {
+
+            return Vector3.zero;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Snaps a rig root back to upright after presentation overlays (death tilt, punch, recoil).
+
+        /// </summary>
+
+        private static void ResetRigUprightRotation(Transform rig)
+
+        {
+
+            if (rig == null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            rig.localEulerAngles = GetRigUprightRotation(rig);
 
         }
 
@@ -3051,6 +5180,24 @@ namespace Crownsfall.Combat
 
             {
 
+                var bannerObject = GameObject.Find("WaveBannerPanel");
+
+                if (bannerObject != null)
+
+                {
+
+                    waveBannerUI = bannerObject.GetComponent<WaveBannerUI>();
+
+                }
+
+            }
+
+
+
+            if (waveBannerUI == null)
+
+            {
+
                 waveBannerUI = FindObjectOfType<WaveBannerUI>();
 
             }
@@ -3104,6 +5251,8 @@ namespace Crownsfall.Combat
                 Debug.LogWarning("RewardScreenUI not found in BattleScene.");
 
             }
+
+
 
         }
 
@@ -3299,11 +5448,85 @@ namespace Crownsfall.Combat
 
 
 
-            enemyFighterRig.DisplayEnemy(_enemyFighter);
+            enemyFighterRig.Display(ResolveEnemyDisplayFighter());
 
             enemyFighterRig.SetFacing(false);
 
+            ResetRigUprightRotation(GetRigTransform(enemyFighterRig));
+
             enemyFighterRig.SetColorTint(enemyTint);
+
+        }
+
+
+
+        /// <summary>
+
+        /// Builds the PlayerFighter snapshot used only for enemy rig visuals.
+
+        /// Mirrors player gear when enabled, or when factory lists left the enemy with no icons.
+
+        /// </summary>
+
+        private PlayerFighter ResolveEnemyDisplayFighter()
+
+        {
+
+            var display = _enemyFighter.ToDisplayFighter();
+
+            if (_playerFighter == null)
+
+            {
+
+                return display;
+
+            }
+
+
+
+            if (enemyMirrorPlayerAppearance || !EnemyHasVisibleEquipment(display))
+
+            {
+
+                display.head = _playerFighter.head ?? display.head;
+
+                display.body = _playerFighter.body ?? display.body;
+
+                display.weapon = _playerFighter.weapon ?? display.weapon;
+
+                display.mount = _playerFighter.mount ?? display.mount;
+
+            }
+
+
+
+            return display;
+
+        }
+
+
+
+        private static bool EnemyHasVisibleEquipment(PlayerFighter display)
+
+        {
+
+            if (display == null)
+
+            {
+
+                return false;
+
+            }
+
+
+
+            return display.head?.icon != null
+
+                   || display.body?.icon != null
+
+                   || display.weapon?.icon != null
+
+                   || display.mount?.icon != null;
 
         }
 
@@ -3530,6 +5753,16 @@ namespace Crownsfall.Combat
 
         {
 
+            StopFighterIdleBreath();
+
+
+
+            var goldAmount = CalculateWaveGoldReward(_waveNumber);
+
+            var xpAmount = CalculateWaveXpReward(_waveNumber);
+
+
+
             if (rewardScreenUI == null)
 
             {
@@ -3537,12 +5770,6 @@ namespace Crownsfall.Combat
                 yield break;
 
             }
-
-
-
-            var goldAmount = CalculateWaveGoldReward(_waveNumber);
-
-            var xpAmount = CalculateWaveXpReward(_waveNumber);
 
 
 
@@ -3567,6 +5794,10 @@ namespace Crownsfall.Combat
         private IEnumerator RunWavePresentationSequence(bool notifyWaveStarted, bool logWaveTransition)
 
         {
+
+            _combatPaused = true;
+
+            StopFighterIdleBreath();
 
             if (logWaveTransition)
 
@@ -3610,8 +5841,6 @@ namespace Crownsfall.Combat
 
                 }
 
-                // Match WaveBannerUI default fade/hold timing so combat still pauses without the UI.
-
                 yield return new WaitForSeconds(1.25f);
 
             }
@@ -3632,9 +5861,17 @@ namespace Crownsfall.Combat
 
             }
 
+
+
+            _combatPaused = false;
+
+            StartFighterIdleBreath();
+
         }
 
 
+
+        /// <summary>
 
         /// <summary>
 

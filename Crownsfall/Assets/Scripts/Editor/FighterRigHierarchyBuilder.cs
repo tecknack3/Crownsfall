@@ -50,6 +50,7 @@ namespace Crownsfall.Editor
             var mountAnchor = GetOrCreateAnchor(rigRect, "MountAnchor");
             var bodyAnchor = GetOrCreateAnchor(rigRect, "BodyAnchor");
             var weaponAnchor = GetOrCreateAnchor(rigRect, "WeaponAnchor");
+            var legAnchor = GetOrCreateAnchor(rigRect, "LegAnchor");
             var headAnchor = GetOrCreateAnchor(rigRect, "HeadAnchor");
             var crownAnchor = GetOrCreateAnchor(rigRect, "CrownAnchor");
 
@@ -69,6 +70,7 @@ namespace Crownsfall.Editor
                 mountAnchor,
                 bodyAnchor,
                 weaponAnchor,
+                legAnchor,
                 headAnchor,
                 crownAnchor,
                 mountImage,
@@ -241,6 +243,7 @@ namespace Crownsfall.Editor
             RectTransform mountAnchor,
             RectTransform bodyAnchor,
             RectTransform weaponAnchor,
+            RectTransform legAnchor,
             RectTransform headAnchor,
             RectTransform crownAnchor,
             Image mountImage,
@@ -256,6 +259,7 @@ namespace Crownsfall.Editor
             serialized.FindProperty("mountAnchor").objectReferenceValue = mountAnchor;
             serialized.FindProperty("bodyAnchor").objectReferenceValue = bodyAnchor;
             serialized.FindProperty("weaponAnchor").objectReferenceValue = weaponAnchor;
+            serialized.FindProperty("legAnchor").objectReferenceValue = legAnchor;
             serialized.FindProperty("headAnchor").objectReferenceValue = headAnchor;
             serialized.FindProperty("crownAnchor").objectReferenceValue = crownAnchor;
             serialized.FindProperty("mountImage").objectReferenceValue = mountImage;
