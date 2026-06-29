@@ -12,6 +12,8 @@ using Crownsfall.Combat.UI;
 
 using Crownsfall.Core;
 
+using Crownsfall.Progress;
+
 using Crownsfall.Services;
 
 using Crownsfall.UI;
@@ -6209,6 +6211,10 @@ namespace Crownsfall.Combat
                 victoryWaveNumber > 0 ? victoryWaveNumber : _waveNumber,
 
                 _playerFighter.currentScore);
+
+
+
+            LocalRunResultStore.RecordRun(summaryData);
 
 
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Crownsfall.Characters;
 using Crownsfall.Combat;
 using Crownsfall.Core;
+using Crownsfall.Progress;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -94,6 +95,10 @@ namespace Crownsfall.UI
         public TMP_Text weaponNameText;
         public TMP_Text mountNameText;
 
+        [Header("Player Record")]
+        [Tooltip("Optional. Compact best-run card below the title. Built at runtime when missing.")]
+        public PlayerRecordUI playerRecordUI;
+
         [Header("Actions")]
         public Button createFighterButton;
 
@@ -141,6 +146,9 @@ namespace Crownsfall.UI
 
         private void Start()
         {
+            EnsurePlayerRecordUi();
+            RefreshPlayerRecordDisplay();
+
             EnsureFighterCardUi();
 
             // Hook up button clicks so the manager responds to player input.
@@ -510,6 +518,53 @@ namespace Crownsfall.UI
         }
 
         /// <summary>
+        /// Ensures the personal-best record card exists under MainLayout (below title).
+        /// </summary>
+        private void EnsurePlayerRecordUi()
+        {
+            if (playerRecordUI != null)
+            {
+                playerRecordUI.EnsureBuilt();
+                return;
+            }
+
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+            {
+                canvas = FindObjectOfType<Canvas>();
+            }
+
+            if (canvas == null)
+            {
+                return;
+            }
+
+            var mainLayout = canvas.transform.Find("MainLayout");
+            if (mainLayout == null)
+            {
+                return;
+            }
+
+            var titleTransform = mainLayout.Find("Title") ?? mainLayout.Find("TitleText");
+            playerRecordUI = PlayerRecordUI.EnsureOnCanvas(mainLayout, titleTransform);
+        }
+
+        /// <summary>
+        /// Loads saved run data and fills the record card.
+        /// </summary>
+        private void RefreshPlayerRecordDisplay()
+        {
+            if (playerRecordUI == null)
+            {
+                return;
+            }
+
+            var hasRecord = LocalRunResultStore.HasRecord();
+            var data = LocalRunResultStore.Load();
+            playerRecordUI.Display(data, hasRecord);
+        }
+
+        /// <summary>
         /// Ensures the mobile fighter card UI exists and wires manager references to it.
         /// </summary>
         private void EnsureFighterCardUi()
@@ -813,8 +868,7 @@ namespace Crownsfall.UI
         }
 
         /// <summary>
-        /// Shows the item name and rarity on two lines, or "None" when nothing is available.
-        /// Rarity uses TMP rich text so GetRarityColor() tints the second line.
+        /// Shows item name and colored rarity on two lines inside the existing selector row.
         /// </summary>
         private static void UpdateNameText(TMP_Text nameText, EquipmentItemSO item)
         {
@@ -824,6 +878,9 @@ namespace Crownsfall.UI
             }
 
             nameText.richText = true;
+            nameText.enableWordWrapping = false;
+            nameText.overflowMode = TextOverflowModes.Ellipsis;
+            nameText.alignment = TextAlignmentOptions.Center;
 
             if (item == null)
             {
@@ -833,9 +890,7 @@ namespace Crownsfall.UI
 
             var rarityHex = ColorUtility.ToHtmlStringRGB(item.GetRarityColor());
             nameText.text =
-                $"{item.itemName}\n" +
-                $"<color=#{rarityHex}>{item.GetRarityDisplayName()}</color>\n" +
-                $"Skill:\n{item.GetSkillDisplayName()}";
+                $"{item.itemName}\n<color=#{rarityHex}>{item.GetRarityDisplayName()}</color>";
         }
 
         /// <summary>
