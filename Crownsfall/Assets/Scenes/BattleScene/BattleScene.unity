@@ -650,19 +650,46 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 349af3c9dd68e472ab30439a78fb95f7, type: 2}
   - {fileID: 11400000, guid: 9b85ea98c4f8948a8b706783c0378de7, type: 2}
   enemyTint: {r: 1, g: 0.32, b: 0.32, a: 1}
+  enemyMirrorPlayerAppearance: 1
   combatBalance: {fileID: 0}
   battleStartDelay: 1
   attackInterval: 0.8
   waveTransitionDelay: 1.2
+  waveTransitionPostEntranceDelay: 0.35
   attackMoveDuration: 0.25
   attackHoldDuration: 0.08
   attackReturnDuration: 0.25
   attackDistancePercent: 0.35
+  playerPunchApproachPercent: 0.1
+  playerAttackStepForwardPercent: 0.15
+  playerAttackStepForwardDuration: 0.12
+  playerAttackStepBackDuration: 0.25
+  playerPunchSnapDurationRatio: 0.1449
+  playerPunchScalePeak: 1.08
+  playerPunchRotationDegrees: 0
+  playerPunchWeaponExtendPixels: 400
+  playerPunchLegExtendPixels: 400
+  playerPunchWeaponMoveFraction: 0.55
+  playerPunchWeaponHoldFraction: 0.375
+  playerPunchLegDelayAfterWeaponSnap: 0.15
+  playerPunchRootDistanceMultiplier: 0.35
   hitShakeDuration: 0.18
   hitShakeStrength: 8
   hitShakeSteps: 6
   deathShrinkDuration: 0.35
   deathFadeDuration: 0.35
+  deathTiltDegrees: 12
+  deathTiltDuration: 0.2
+  attackKickProbability: 0.3
+  hitRecoilDistance: 14
+  hitRecoilDuration: 0.14
+  hitRecoilRotationDegrees: 4
+  hitRecoilScalePeak: 1.04
+  hitRecoilScaleYSquash: 0.97
+  attackAnticipationDuration: 0.05
+  hitStopDuration: 0.05
+  deathPreRecoilDistance: 6
+  deathPreRecoilDuration: 0.08
   normalEntranceDuration: 0.45
   bossEntranceDuration: 0.8
   normalEntranceOffsetX: 250
@@ -1436,6 +1463,7 @@ MonoBehaviour:
   mountAnchor: {fileID: 762340946}
   bodyAnchor: {fileID: 122529698}
   weaponAnchor: {fileID: 1754605258}
+  legAnchor: {fileID: 0}
   headAnchor: {fileID: 1586549557}
   crownAnchor: {fileID: 1217463193}
   mountImage: {fileID: 1821550182}
@@ -1449,8 +1477,12 @@ MonoBehaviour:
   mountOffset: {x: 0, y: -80}
   bodyOffset: {x: 0, y: 0}
   weaponOffset: {x: 45, y: 10}
+  legOffset: {x: 30, y: -65}
   headOffset: {x: 0, y: 75}
   crownOffset: {x: 0, y: 100}
+  idleBreathBobPixels: 2
+  idleBreathPeriodSeconds: 2.5
+  idleBreathScaleAmplitude: 0.015
 --- !u!1 &345735644
 GameObject:
   m_ObjectHideFlags: 0
@@ -1719,6 +1751,7 @@ MonoBehaviour:
   mountAnchor: {fileID: 1655416703}
   bodyAnchor: {fileID: 1982459475}
   weaponAnchor: {fileID: 542498372}
+  legAnchor: {fileID: 0}
   headAnchor: {fileID: 1163573824}
   crownAnchor: {fileID: 214986133}
   mountImage: {fileID: 1812122493}
@@ -1732,8 +1765,12 @@ MonoBehaviour:
   mountOffset: {x: 0, y: -80}
   bodyOffset: {x: 0, y: 0}
   weaponOffset: {x: 45, y: 10}
+  legOffset: {x: 30, y: -65}
   headOffset: {x: 0, y: 75}
   crownOffset: {x: 0, y: 100}
+  idleBreathBobPixels: 2
+  idleBreathPeriodSeconds: 2.5
+  idleBreathScaleAmplitude: 0.015
 --- !u!1 &370787960
 GameObject:
   m_ObjectHideFlags: 0

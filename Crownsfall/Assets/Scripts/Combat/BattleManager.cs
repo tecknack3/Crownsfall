@@ -1590,6 +1590,10 @@ namespace Crownsfall.Combat
 
         {
 
+            if (CombatDebug.TracePresentation)
+
+                Debug.Log($"[TRACE] PLAYER ATTACK START | wave={_waveNumber} strike pending frame={Time.frameCount}");
+
 
 
             if (_combatPaused || _attackPresentationRunning)
@@ -1643,6 +1647,10 @@ namespace Crownsfall.Combat
 
 
             var strikeType = RollAttackStrikeType(playerFighterRig);
+
+            if (CombatDebug.TracePresentation)
+
+                Debug.Log($"[TRACE] PLAYER STRIKE TYPE | strike={strikeType}");
 
 
 
@@ -1790,13 +1798,19 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
-        /// Enemy turn wrapper: play the lunge animation first, then run existing damage logic.
+        /// Enemy turn wrapper: step forward, punch/kick, recoil, then step back before next turn.
 
         /// </summary>
 
         private IEnumerator PerformEnemyAttackWithAnimation()
 
         {
+
+            if (CombatDebug.TracePresentation)
+
+                Debug.Log($"[TRACE] ENEMY ATTACK START | wave={_waveNumber} frame={Time.frameCount}");
+
+
 
             if (_combatPaused || _attackPresentationRunning)
 
@@ -1836,7 +1850,9 @@ namespace Crownsfall.Combat
 
             var strikeType = RollAttackStrikeType(enemyFighterRig);
 
+            if (CombatDebug.TracePresentation)
 
+                Debug.Log($"[TRACE] ENEMY STRIKE TYPE | strike={strikeType}");
 
 
 
@@ -2038,6 +2054,10 @@ namespace Crownsfall.Combat
 
         {
 
+            if (CombatDebug.TracePresentation)
+
+                Debug.Log($"[TRACE] ATTACK SEQUENCE START | strike={strikeType}");
+
 
 
             var attackerRect = GetRigRectTransform(attackerRig);
@@ -2074,6 +2094,24 @@ namespace Crownsfall.Combat
 
 
 
+            if (CombatDebug.TracePresentation)
+
+            {
+
+                var deltaX = stepPosition.x - home.x;
+
+                var deltaY = stepPosition.y - home.y;
+
+                Debug.Log(
+
+                    $"[TRACE] ATTACK STEP FORWARD | startPos={home} stepPos={stepPosition} " +
+
+                    $"deltaX={deltaX:F1} deltaY={deltaY:F1} duration={playerAttackStepForwardDuration:F3}s");
+
+            }
+
+
+
             yield return LerpPlayerPunchPhase(
 
                 attackerRect,
@@ -2107,6 +2145,10 @@ namespace Crownsfall.Combat
                 SetRectAnchoredPosition(attackerRect, stepPosition);
 
 
+
+                if (CombatDebug.TracePresentation)
+
+                    Debug.Log($"[TRACE] ATTACK ANTICIPATION | duration={attackAnticipationDuration:F3}s");
 
 
 
@@ -2474,6 +2516,10 @@ namespace Crownsfall.Combat
 
 
 
+            if (CombatDebug.TracePresentation)
+
+                Debug.Log($"[TRACE] HIT STOP | duration={hitStopDuration:F3}s (realtime)");
+
 
 
             yield return new WaitForSecondsRealtime(hitStopDuration);
@@ -2690,6 +2736,10 @@ namespace Crownsfall.Combat
 
 
 
+            if (CombatDebug.TracePresentation)
+
+                Debug.Log($"[TRACE] ATTACK STRIKE RECOVER COMPLETE | strike={strikeType}");
+
         }
 
 
@@ -2730,6 +2780,24 @@ namespace Crownsfall.Combat
 
 
             var attackerTransform = GetRigTransform(attackerRig);
+
+
+
+            if (CombatDebug.TracePresentation)
+
+            {
+
+                var deltaX = home.x - stepPosition.x;
+
+                var deltaY = home.y - stepPosition.y;
+
+                Debug.Log(
+
+                    $"[TRACE] ATTACK STEP BACK | startPos={stepPosition} endPos={home} " +
+
+                    $"deltaX={deltaX:F1} deltaY={deltaY:F1} duration={stepBackDuration:F3}s");
+
+            }
 
 
 
@@ -2866,6 +2934,24 @@ namespace Crownsfall.Combat
 
 
             SetRectAnchoredPosition(attackerRect, attackerHome);
+
+
+
+            if (CombatDebug.TracePresentation)
+
+            {
+
+                var deltaX = stepShared.x - startShared.x;
+
+                var deltaY = stepShared.y - startShared.y;
+
+                Debug.Log(
+
+                    $"[TRACE] ATTACK STEP POSITION | startPos={startShared} stepPos={stepShared} endPos={endShared} " +
+
+                    $"deltaX={deltaX:F1} deltaY={deltaY:F1} anchoredStep={stepAnchored} percent={effectivePercent:F3}");
+
+            }
 
 
 
@@ -3039,6 +3125,12 @@ namespace Crownsfall.Combat
 
 
 
+            if (CombatDebug.TracePresentation)
+
+                Debug.Log($"[TRACE] HIT RECOIL START | distance={hitRecoilDistance * strengthMultiplier:F1}px duration={hitRecoilDuration:F3}s");
+
+
+
             var sharedParent = attackerRect != null
 
                 ? GetSharedRectTransformParent(defenderRect, attackerRect)
@@ -3194,6 +3286,12 @@ namespace Crownsfall.Combat
             defenderTransform.localScale = defenderOriginalScale;
 
             defenderTransform.localEulerAngles = restRotation;
+
+
+
+            if (CombatDebug.TracePresentation)
+
+                Debug.Log("[TRACE] HIT RECOIL COMPLETE");
 
         }
 
@@ -3735,6 +3833,10 @@ namespace Crownsfall.Combat
 
 
 
+                if (CombatDebug.TracePresentation)
+
+                    Debug.Log("[TRACE] DEFEAT TILT START");
+
 
 
                 yield return LerpPlayerPunchPhase(
@@ -3764,6 +3866,12 @@ namespace Crownsfall.Combat
 
 
                 ResetRigUprightRotation(rig);
+
+
+
+                if (CombatDebug.TracePresentation)
+
+                    Debug.Log("[TRACE] DEFEAT TILT COMPLETE");
 
             }
 
@@ -5803,7 +5911,9 @@ namespace Crownsfall.Combat
 
             {
 
-                Debug.Log("Wave Transition Started");
+                if (CombatDebug.TracePresentation)
+
+                    Debug.Log("Wave Transition Started");
 
             }
 
@@ -5857,7 +5967,9 @@ namespace Crownsfall.Combat
 
             {
 
-                Debug.Log("Wave Transition Complete - Combat Resuming");
+                if (CombatDebug.TracePresentation)
+
+                    Debug.Log("Wave Transition Complete - Combat Resuming");
 
             }
 
@@ -5870,8 +5982,6 @@ namespace Crownsfall.Combat
         }
 
 
-
-        /// <summary>
 
         /// <summary>
 
