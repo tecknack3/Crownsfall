@@ -80,6 +80,7 @@
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/VertexColorCycler.cs" />
     <Compile Include="Assets/Scripts/Characters/EnemyFighter.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/EnvMapAnimator.cs" />
+    <Compile Include="Assets/Scripts/UI/FighterCardUI.cs" />
     <Compile Include="Assets/Scripts/Combat/ProgressionProfile.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_TextSelector_A.cs" />
     <Compile Include="Assets/Scripts/Combat/UI/RewardScreenUI.cs" />
@@ -124,6 +125,7 @@
     <Compile Include="Assets/Scripts/Combat/Skills/SkillEngine.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TextMeshProFloatingText.cs" />
     <Compile Include="Assets/Scripts/Combat/UI/WaveBannerUI.cs" />
+    <Compile Include="Assets/Scripts/UI/SimpleDialogUI.cs" />
     <Compile Include="Assets/Scripts/Combat/Skills/BurnSkill.cs" />
     <Compile Include="Assets/Scripts/Combat/Skills/PoisonSkill.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/ShaderPropAnimator.cs" />

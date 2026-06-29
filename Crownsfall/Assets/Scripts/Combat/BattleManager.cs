@@ -6226,6 +6226,16 @@ namespace Crownsfall.Combat
 
 
 
+            if (rewardScreenUI != null)
+
+            {
+
+                rewardScreenUI.Hide();
+
+            }
+
+
+
             battleSummaryUI.ShowSummary(summaryData);
 
             yield return battleSummaryUI.WaitForContinue();

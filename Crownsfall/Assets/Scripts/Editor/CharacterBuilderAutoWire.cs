@@ -168,86 +168,107 @@ namespace Crownsfall.Editor
                 "FighterCardPanel",
                 missing);
 
-            AssignComponentReference<Image>(
+            var panelTransform = FindTransform(mainLayout, "FighterCardPanel");
+            if (panelTransform == null)
+            {
+                return;
+            }
+
+            var cardUi = panelTransform.GetComponent<FighterCardUI>();
+            if (cardUi == null)
+            {
+                cardUi = panelTransform.gameObject.AddComponent<FighterCardUI>();
+            }
+
+            cardUi.EnsureBuilt();
+
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardMountImage",
-                mainLayout,
-                "FighterCardPanel/Content/CardPreviewArea/CardMountImage",
+                cardUi.cardMountImage,
                 missing);
-            AssignComponentReference<Image>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardBodyImage",
-                mainLayout,
-                "FighterCardPanel/Content/CardPreviewArea/CardBodyImage",
+                cardUi.cardBodyImage,
                 missing);
-            AssignComponentReference<Image>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardWeaponImage",
-                mainLayout,
-                "FighterCardPanel/Content/CardPreviewArea/CardWeaponImage",
+                cardUi.cardWeaponImage,
                 missing);
-            AssignComponentReference<Image>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardHeadImage",
-                mainLayout,
-                "FighterCardPanel/Content/CardPreviewArea/CardHeadImage",
+                cardUi.cardHeadImage,
                 missing);
-
-            AssignComponentReference<TMP_Text>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardFighterNameText",
-                mainLayout,
-                "FighterCardPanel/Content/CardFighterNameText",
+                cardUi.cardFighterNameText,
                 missing);
-            AssignComponentReference<TMP_Text>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardAttackText",
-                mainLayout,
-                "FighterCardPanel/Content/StatsPanel/CardAttackText",
+                cardUi.cardAttackText,
                 missing);
-            AssignComponentReference<TMP_Text>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardDefenseText",
-                mainLayout,
-                "FighterCardPanel/Content/StatsPanel/CardDefenseText",
+                cardUi.cardDefenseText,
                 missing);
-            AssignComponentReference<TMP_Text>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardSpeedText",
-                mainLayout,
-                "FighterCardPanel/Content/StatsPanel/CardSpeedText",
+                cardUi.cardSpeedText,
                 missing);
-            AssignComponentReference<TMP_Text>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardHealthText",
-                mainLayout,
-                "FighterCardPanel/Content/StatsPanel/CardHealthText",
+                cardUi.cardHealthText,
                 missing);
-            AssignComponentReference<TMP_Text>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardPowerSummaryText",
-                mainLayout,
-                "FighterCardPanel/Content/PowerSummaryText",
+                cardUi.cardPowerSummaryText,
                 missing);
-            AssignComponentReference<TMP_Text>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "cardSkillsSummaryText",
-                mainLayout,
-                "FighterCardPanel/Content/SkillsSummaryText",
+                cardUi.cardSkillsSummaryText,
                 missing);
-
-            AssignComponentReference<Button>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "startBattleButton",
-                mainLayout,
-                "FighterCardPanel/Content/ButtonRow/StartBattleButton",
+                cardUi.startBattleButton,
                 missing);
-            AssignComponentReference<Button>(
+            AssignComponentReferenceFromInstance(
                 serializedManager,
                 "backEditButton",
-                mainLayout,
-                "FighterCardPanel/Content/ButtonRow/BackEditButton",
+                cardUi.backEditButton,
                 missing);
+        }
+
+        private static void AssignComponentReferenceFromInstance<T>(
+            SerializedObject serializedManager,
+            string propertyName,
+            T component,
+            List<string> missing) where T : Object
+        {
+            if (component == null)
+            {
+                missing.Add(propertyName + " (not built on FighterCardUI)");
+                return;
+            }
+
+            var property = serializedManager.FindProperty(propertyName);
+            if (property == null)
+            {
+                missing.Add(propertyName + " (SerializedProperty not found on CharacterBuilderManager)");
+                return;
+            }
+
+            property.objectReferenceValue = component;
         }
 
         private static void AssignGameObjectReference(

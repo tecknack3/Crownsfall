@@ -73,19 +73,21 @@ namespace Crownsfall.Editor
 
         // Production UI layout tuned for mobile portrait (e.g. Samsung Galaxy S10e @ 1080×2280).
         // CanvasScaler reference is 1080×1920; anchors keep content inside safe areas.
-        // Fighter rig + layers are ~25% larger than the original 320×420 layout.
-        private static readonly Vector2 FighterRigSize = new Vector2(400f, 525f); // 320×420 × 1.25
-        private const float LayerMountBodySize = 350f;
-        private const float LayerWeaponSize = 250f;
-        private const float LayerHeadSize = 275f;
-        private const float LayerCrownSize = 200f;
-        private const float BattleLogFontSize = 30f;
-        private const float StatsFontSize = 26f;
-        private const float HealthBarLabelFontSize = 22f;
-        private const float HealthBarWidth = 300f;
-        private const float HealthBarHeight = 32f;
-        private const float BottomBarHeight = 240f;
-        private const float BottomBarPadding = 32f;
+        // Fighter rigs ~30% larger than the original 320×420 baseline; centered higher in BattleArea.
+        private static readonly Vector2 FighterRigSize = new Vector2(520f, 682f);
+        private const float LayerMountBodySize = 455f;
+        private const float LayerWeaponSize = 325f;
+        private const float LayerHeadSize = 358f;
+        private const float LayerCrownSize = 260f;
+        private const float BattleLogFontSize = 28f;
+        private const float StatsFontSize = 24f;
+        private const float HealthBarLabelFontSize = 20f;
+        private const float HealthBarWidth = 340f;
+        private const float HealthBarHeight = 44f;
+        private const float BottomBarHeight = 220f;
+        private const float BottomBarPadding = 40f;
+        private const float VsFontSize = 54f;
+        private const float BattleLogPanelHeight = 200f;
 
         [MenuItem("Tools/Fighter Tools/Setup Battle Scene", true)]
         private static bool SetupSceneFromMenuValidate()
@@ -757,6 +759,9 @@ namespace Crownsfall.Editor
             CreateBottomStatsBar(hudRoot, out var playerStatsText, out var enemyStatsText);
             var gameOverRefs = CreateGameOverPanel(hudRoot);
 
+            var playerHealthBarText = GameObject.Find("PlayerHealthBarLabel")?.GetComponent<TextMeshProUGUI>();
+            var enemyHealthBarText = GameObject.Find("EnemyHealthBarLabel")?.GetComponent<TextMeshProUGUI>();
+
             WireBattleHud(
                 battleHud,
                 titleText,
@@ -767,6 +772,8 @@ namespace Crownsfall.Editor
                 enemyStatsText,
                 playerHealthFill,
                 enemyHealthFill,
+                playerHealthBarText,
+                enemyHealthBarText,
                 gameOverRefs);
 
             return battleHud;
@@ -799,7 +806,7 @@ namespace Crownsfall.Editor
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.color = new Color(0.92f, 0.88f, 0.72f, 1f);
 
-            waveText = CreateNamedTmpText(topBar, "WaveText", "Wave 1", 32f, FontStyles.Normal);
+            waveText = CreateNamedTmpText(topBar, "WaveText", "Wave 1 / 3", 32f, FontStyles.Normal);
             var waveRect = waveText.rectTransform;
             waveRect.anchorMin = new Vector2(0f, 0.5f);
             waveRect.anchorMax = new Vector2(0f, 0.5f);
@@ -829,34 +836,34 @@ namespace Crownsfall.Editor
             out Image enemyHealthFill)
         {
             var battleArea = CreateRect("BattleArea", parent);
-            battleArea.anchorMin = new Vector2(0f, 0.28f);
-            battleArea.anchorMax = new Vector2(1f, 0.78f);
+            battleArea.anchorMin = new Vector2(0f, 0.26f);
+            battleArea.anchorMax = new Vector2(1f, 0.82f);
             battleArea.offsetMin = new Vector2(24f, 0f);
             battleArea.offsetMax = new Vector2(-24f, 0f);
             battleArea.pivot = new Vector2(0.5f, 0.5f);
 
             var playerSlot = CreateRect("PlayerSlot", battleArea);
             playerSlot.anchorMin = new Vector2(0f, 0f);
-            playerSlot.anchorMax = new Vector2(0.42f, 1f);
+            playerSlot.anchorMax = new Vector2(0.46f, 1f);
             playerSlot.offsetMin = Vector2.zero;
             playerSlot.offsetMax = Vector2.zero;
 
             playerRig = CreateFighterRig(playerSlot, "PlayerFighterRig", isPlayer: true);
-            playerHealthFill = CreateHealthBar(playerSlot, "PlayerHealthBar",
-                new Color(0.25f, 0.75f, 0.35f, 1f), "Player HP");
+            CreateHealthBar(playerSlot, "PlayerHealthBar",
+                new Color(0.25f, 0.75f, 0.35f, 1f), out playerHealthFill);
 
-            vsText = CreateNamedTmpText(battleArea, "VSText", "VS", 88f, FontStyles.Bold);
+            vsText = CreateNamedTmpText(battleArea, "VSText", "VS", VsFontSize, FontStyles.Bold);
             var vsRect = vsText.rectTransform;
             vsRect.anchorMin = new Vector2(0.5f, 0.5f);
             vsRect.anchorMax = new Vector2(0.5f, 0.5f);
             vsRect.pivot = new Vector2(0.5f, 0.5f);
-            vsRect.anchoredPosition = new Vector2(0f, 40f);
-            vsRect.sizeDelta = new Vector2(200f, 140f);
+            vsRect.anchoredPosition = new Vector2(0f, 60f);
+            vsRect.sizeDelta = new Vector2(120f, 80f);
             vsText.alignment = TextAlignmentOptions.Center;
-            vsText.color = new Color(0.85f, 0.85f, 0.92f, 0.35f);
+            vsText.color = new Color(0.85f, 0.85f, 0.92f, 0.22f);
 
             var enemySlot = CreateRect("EnemySlot", battleArea);
-            enemySlot.anchorMin = new Vector2(0.58f, 0f);
+            enemySlot.anchorMin = new Vector2(0.54f, 0f);
             enemySlot.anchorMax = new Vector2(1f, 1f);
             enemySlot.offsetMin = Vector2.zero;
             enemySlot.offsetMax = Vector2.zero;
@@ -864,8 +871,8 @@ namespace Crownsfall.Editor
             CreateEnemyBackdrop(enemySlot);
 
             enemyRig = CreateFighterRig(enemySlot, "EnemyFighterRig", isPlayer: false);
-            enemyHealthFill = CreateHealthBar(enemySlot, "EnemyHealthBar",
-                new Color(0.85f, 0.28f, 0.28f, 1f), "Enemy HP");
+            CreateHealthBar(enemySlot, "EnemyHealthBar",
+                new Color(0.85f, 0.28f, 0.28f, 1f), out enemyHealthFill);
 
             return battleArea;
         }
@@ -878,12 +885,12 @@ namespace Crownsfall.Editor
         {
             var rigRect = CreateRect(rigName, slot);
 
-            // Anchor toward the lower corner so fighters feel grounded on mobile portrait.
-            var anchorX = isPlayer ? 0.32f : 0.68f;
-            rigRect.anchorMin = new Vector2(anchorX, 0.22f);
-            rigRect.anchorMax = new Vector2(anchorX, 0.22f);
+            // Anchor higher and closer to center so fighters read larger on mobile portrait.
+            var anchorX = isPlayer ? 0.38f : 0.62f;
+            rigRect.anchorMin = new Vector2(anchorX, 0.38f);
+            rigRect.anchorMax = new Vector2(anchorX, 0.38f);
             rigRect.pivot = new Vector2(0.5f, 0.5f);
-            rigRect.anchoredPosition = isPlayer ? new Vector2(-12f, 8f) : new Vector2(12f, 8f);
+            rigRect.anchoredPosition = isPlayer ? new Vector2(-8f, 24f) : new Vector2(8f, 24f);
             rigRect.sizeDelta = FighterRigSize;
 
             var rig = rigRect.gameObject.AddComponent<FighterRig>();
@@ -956,10 +963,10 @@ namespace Crownsfall.Editor
             var backdrop = CreateRect("EnemyBackdrop", enemySlot);
             backdrop.SetAsFirstSibling();
 
-            backdrop.anchorMin = new Vector2(0.68f, 0.22f);
-            backdrop.anchorMax = new Vector2(0.68f, 0.22f);
+            backdrop.anchorMin = new Vector2(0.62f, 0.38f);
+            backdrop.anchorMax = new Vector2(0.62f, 0.38f);
             backdrop.pivot = new Vector2(0.5f, 0.5f);
-            backdrop.anchoredPosition = new Vector2(12f, 8f);
+            backdrop.anchoredPosition = new Vector2(8f, 24f);
             backdrop.sizeDelta = new Vector2(FighterRigSize.x + 40f, FighterRigSize.y + 40f);
 
             var image = backdrop.gameObject.AddComponent<Image>();
@@ -1019,10 +1026,14 @@ namespace Crownsfall.Editor
         }
 
         /// <summary>
-        /// Health bar anchored to the bottom of a fighter slot, with a label above it.
+        /// Health bar anchored to the bottom of a fighter slot, with HP text centered on the bar.
         /// Returns the fill Image for BattleHUD.
         /// </summary>
-        private static Image CreateHealthBar(RectTransform slot, string barName, Color fillColor, string labelText)
+        private static TextMeshProUGUI CreateHealthBar(
+            RectTransform slot,
+            string barName,
+            Color fillColor,
+            out Image fillImage)
         {
             var barRect = CreateRect(barName, slot);
             barRect.anchorMin = new Vector2(0.5f, 0f);
@@ -1030,18 +1041,6 @@ namespace Crownsfall.Editor
             barRect.pivot = new Vector2(0.5f, 0f);
             barRect.anchoredPosition = new Vector2(0f, 28f);
             barRect.sizeDelta = new Vector2(HealthBarWidth, HealthBarHeight);
-
-            // Static label above the bar (BattleHUD only drives the fill amount).
-            var label = CreateNamedTmpText(slot, barName + "Label", labelText,
-                HealthBarLabelFontSize, FontStyles.Bold);
-            var labelRect = label.rectTransform;
-            labelRect.anchorMin = new Vector2(0.5f, 0f);
-            labelRect.anchorMax = new Vector2(0.5f, 0f);
-            labelRect.pivot = new Vector2(0.5f, 0f);
-            labelRect.anchoredPosition = new Vector2(0f, 28f + HealthBarHeight + 6f);
-            labelRect.sizeDelta = new Vector2(HealthBarWidth, 28f);
-            label.alignment = TextAlignmentOptions.Center;
-            label.color = new Color(0.88f, 0.9f, 0.95f, 1f);
 
             var background = barRect.gameObject.AddComponent<Image>();
             background.color = new Color(0.12f, 0.13f, 0.18f, 1f);
@@ -1057,8 +1056,15 @@ namespace Crownsfall.Editor
             fill.fillOrigin = (int)Image.OriginHorizontal.Left;
             fill.fillAmount = 1f;
             fill.raycastTarget = false;
+            fillImage = fill;
 
-            return fill;
+            var label = CreateNamedTmpText(barRect, barName + "Label", "270 / 270",
+                HealthBarLabelFontSize, FontStyles.Bold);
+            StretchToParent(label.rectTransform, new Vector2(8f, 0f), new Vector2(-8f, 0f));
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = Color.white;
+
+            return label;
         }
 
         private static RectTransform CreateProductionBattleLogPanel(
@@ -1070,7 +1076,7 @@ namespace Crownsfall.Editor
             panel.anchorMax = new Vector2(0.5f, 0f);
             panel.pivot = new Vector2(0.5f, 0f);
             panel.anchoredPosition = new Vector2(0f, BottomBarHeight + 16f);
-            panel.sizeDelta = new Vector2(960f, 280f);
+            panel.sizeDelta = new Vector2(960f, BattleLogPanelHeight);
 
             var panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.color = new Color(0.06f, 0.07f, 0.11f, 0.88f);
@@ -1106,23 +1112,26 @@ namespace Crownsfall.Editor
             barImage.raycastTarget = false;
 
             playerStatsText = CreateNamedTmpText(bottomBar, "PlayerStatsText",
-                "Player\nATK 0   DEF 0\nSPD 0   HP 0/0", StatsFontSize, FontStyles.Normal);
+                "Player\nATK 0\nDEF 0\nSPD 0\nHP 0/0", StatsFontSize, FontStyles.Normal);
             var playerRect = playerStatsText.rectTransform;
             playerRect.anchorMin = new Vector2(0f, 0f);
             playerRect.anchorMax = new Vector2(0.5f, 1f);
-            playerRect.offsetMin = new Vector2(BottomBarPadding, 24f);
-            playerRect.offsetMax = new Vector2(-16f, -24f);
+            playerRect.offsetMin = new Vector2(BottomBarPadding, 20f);
+            playerRect.offsetMax = new Vector2(-12f, -20f);
             playerStatsText.alignment = TextAlignmentOptions.TopLeft;
-            playerStatsText.lineSpacing = 4f;
+            playerStatsText.lineSpacing = 2f;
+            playerStatsText.richText = true;
 
             enemyStatsText = CreateNamedTmpText(bottomBar, "EnemyStatsText",
-                "Enemy\nATK 0   DEF 0\nSPD 0   HP 0/0", StatsFontSize, FontStyles.Normal);
+                "Enemy\nATK 0\nDEF 0\nSPD 0\nHP 0/0", StatsFontSize, FontStyles.Normal);
             var enemyRect = enemyStatsText.rectTransform;
             enemyRect.anchorMin = new Vector2(0.5f, 0f);
             enemyRect.anchorMax = new Vector2(1f, 1f);
-            enemyRect.offsetMin = new Vector2(16f, 24f);
-            enemyRect.offsetMax = new Vector2(-BottomBarPadding, -24f);
+            enemyRect.offsetMin = new Vector2(12f, 20f);
+            enemyRect.offsetMax = new Vector2(-BottomBarPadding, -20f);
             enemyStatsText.alignment = TextAlignmentOptions.TopRight;
+            enemyStatsText.lineSpacing = 2f;
+            enemyStatsText.richText = true;
 
             return bottomBar;
         }
@@ -1262,6 +1271,8 @@ namespace Crownsfall.Editor
             TextMeshProUGUI enemyStatsText,
             Image playerHealthFill,
             Image enemyHealthFill,
+            TextMeshProUGUI playerHealthBarText,
+            TextMeshProUGUI enemyHealthBarText,
             GameOverPanelRefs gameOverRefs)
         {
             var serialized = new SerializedObject(hud);
@@ -1273,6 +1284,10 @@ namespace Crownsfall.Editor
             serialized.FindProperty("enemyStatsText").objectReferenceValue = enemyStatsText;
             serialized.FindProperty("playerHealthBarFill").objectReferenceValue = playerHealthFill;
             serialized.FindProperty("enemyHealthBarFill").objectReferenceValue = enemyHealthFill;
+            serialized.FindProperty("playerHealthBarText").objectReferenceValue = playerHealthBarText;
+            serialized.FindProperty("enemyHealthBarText").objectReferenceValue = enemyHealthBarText;
+            serialized.FindProperty("displayTotalWaves").intValue = 3;
+            serialized.FindProperty("maxLogLines").intValue = 5;
 
             serialized.FindProperty("gameOverPanel").objectReferenceValue = gameOverRefs.Panel;
             serialized.FindProperty("gameOverTitleText").objectReferenceValue = gameOverRefs.TitleText;
@@ -1372,14 +1387,12 @@ namespace Crownsfall.Editor
             ApplyLayerSizes(playerRigObject.transform);
             ApplyLayerSizes(enemyRigObject.transform);
 
-            EnsureHealthBarLabel(enemySlot, "EnemyHealthBarLabel", "Enemy HP", enemyHealthBar);
-            EnsureHealthBarLabel(
-                playerHealthBar != null ? playerHealthBar.parent as RectTransform : null,
-                "PlayerHealthBarLabel",
-                "Player HP",
-                playerHealthBar);
+            EnsureHealthBarLabelOnBar(playerHealthBar, "PlayerHealthBarLabel");
+            EnsureHealthBarLabelOnBar(enemyHealthBar, "EnemyHealthBarLabel");
             ApplyHealthBarLayout(playerHealthBar);
             ApplyHealthBarLayout(enemyHealthBar);
+
+            WireHealthBarLabelsOnBattleHud();
 
             EnsureEnemyBackdrop(enemySlot);
 
@@ -1389,19 +1402,21 @@ namespace Crownsfall.Editor
             if (playerStatsText != null)
             {
                 playerStatsText.fontSize = StatsFontSize;
-                playerStatsText.lineSpacing = 4f;
+                playerStatsText.lineSpacing = 2f;
+                playerStatsText.richText = true;
                 var playerRect = playerStatsText.rectTransform;
-                playerRect.offsetMin = new Vector2(BottomBarPadding, 24f);
-                playerRect.offsetMax = new Vector2(-16f, -24f);
+                playerRect.offsetMin = new Vector2(BottomBarPadding, 20f);
+                playerRect.offsetMax = new Vector2(-12f, -20f);
             }
 
             if (enemyStatsText != null)
             {
                 enemyStatsText.fontSize = StatsFontSize;
-                enemyStatsText.lineSpacing = 4f;
+                enemyStatsText.lineSpacing = 2f;
+                enemyStatsText.richText = true;
                 var enemyRect = enemyStatsText.rectTransform;
-                enemyRect.offsetMin = new Vector2(16f, 24f);
-                enemyRect.offsetMax = new Vector2(-BottomBarPadding, -24f);
+                enemyRect.offsetMin = new Vector2(12f, 20f);
+                enemyRect.offsetMax = new Vector2(-BottomBarPadding, -20f);
             }
 
             if (bottomBar != null)
@@ -1412,7 +1427,7 @@ namespace Crownsfall.Editor
             if (battleLogPanel != null)
             {
                 battleLogPanel.anchoredPosition = new Vector2(0f, BottomBarHeight + 16f);
-                battleLogPanel.sizeDelta = new Vector2(960f, 280f);
+                battleLogPanel.sizeDelta = new Vector2(960f, BattleLogPanelHeight);
             }
 
             var battleManager = Object.FindObjectOfType<BattleManager>();
@@ -1506,11 +1521,11 @@ namespace Crownsfall.Editor
                 return;
             }
 
-            var anchorX = isPlayer ? 0.32f : 0.68f;
-            rigRect.anchorMin = new Vector2(anchorX, 0.22f);
-            rigRect.anchorMax = new Vector2(anchorX, 0.22f);
+            var anchorX = isPlayer ? 0.38f : 0.62f;
+            rigRect.anchorMin = new Vector2(anchorX, 0.38f);
+            rigRect.anchorMax = new Vector2(anchorX, 0.38f);
             rigRect.pivot = new Vector2(0.5f, 0.5f);
-            rigRect.anchoredPosition = isPlayer ? new Vector2(-12f, 8f) : new Vector2(12f, 8f);
+            rigRect.anchoredPosition = isPlayer ? new Vector2(-8f, 24f) : new Vector2(8f, 24f);
             rigRect.sizeDelta = FighterRigSize;
             EditorUtility.SetDirty(rigRect);
         }
@@ -1559,6 +1574,60 @@ namespace Crownsfall.Editor
         }
 
         /// <summary>
+        /// Ensures the HP label sits centered on the health bar and shows numeric HP.
+        /// </summary>
+        private static void EnsureHealthBarLabelOnBar(RectTransform healthBar, string labelName)
+        {
+            if (healthBar == null)
+            {
+                return;
+            }
+
+            var existing = healthBar.Find(labelName);
+            TextMeshProUGUI label;
+
+            if (existing != null)
+            {
+                label = existing.GetComponent<TextMeshProUGUI>();
+            }
+            else
+            {
+                label = CreateNamedTmpText(healthBar, labelName, "270 / 270",
+                    HealthBarLabelFontSize, FontStyles.Bold);
+            }
+
+            if (label == null)
+            {
+                return;
+            }
+
+            StretchToParent(label.rectTransform, new Vector2(8f, 0f), new Vector2(-8f, 0f));
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = Color.white;
+            label.fontSize = HealthBarLabelFontSize;
+            label.text = "270 / 270";
+        }
+
+        private static void WireHealthBarLabelsOnBattleHud()
+        {
+            var battleHud = Object.FindObjectOfType<BattleHUD>();
+            if (battleHud == null)
+            {
+                return;
+            }
+
+            var serialized = new SerializedObject(battleHud);
+            serialized.FindProperty("playerHealthBarText").objectReferenceValue =
+                GameObject.Find("PlayerHealthBarLabel")?.GetComponent<TextMeshProUGUI>();
+            serialized.FindProperty("enemyHealthBarText").objectReferenceValue =
+                GameObject.Find("EnemyHealthBarLabel")?.GetComponent<TextMeshProUGUI>();
+            serialized.FindProperty("displayTotalWaves").intValue = 3;
+            serialized.FindProperty("maxLogLines").intValue = 5;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(battleHud);
+        }
+
+        /// <summary>
         /// Adds a health bar label if the scene was built before labels existed.
         /// </summary>
         private static void EnsureHealthBarLabel(
@@ -1567,34 +1636,7 @@ namespace Crownsfall.Editor
             string labelText,
             RectTransform healthBar)
         {
-            if (slot == null || healthBar == null)
-            {
-                return;
-            }
-
-            var existing = slot.Find(labelName);
-            if (existing != null)
-            {
-                var existingLabel = existing.GetComponent<TextMeshProUGUI>();
-                if (existingLabel != null)
-                {
-                    existingLabel.fontSize = HealthBarLabelFontSize;
-                    existingLabel.text = labelText;
-                }
-
-                return;
-            }
-
-            var label = CreateNamedTmpText(slot, labelName, labelText,
-                HealthBarLabelFontSize, FontStyles.Bold);
-            var labelRect = label.rectTransform;
-            labelRect.anchorMin = new Vector2(0.5f, 0f);
-            labelRect.anchorMax = new Vector2(0.5f, 0f);
-            labelRect.pivot = new Vector2(0.5f, 0f);
-            labelRect.anchoredPosition = new Vector2(0f, 28f + HealthBarHeight + 6f);
-            labelRect.sizeDelta = new Vector2(HealthBarWidth, 28f);
-            label.alignment = TextAlignmentOptions.Center;
-            label.color = new Color(0.88f, 0.9f, 0.95f, 1f);
+            EnsureHealthBarLabelOnBar(healthBar, labelName);
         }
 
         /// <summary>
@@ -1611,10 +1653,10 @@ namespace Crownsfall.Editor
             if (existing != null)
             {
                 var existingRect = existing as RectTransform;
-                existingRect.anchorMin = new Vector2(0.68f, 0.22f);
-                existingRect.anchorMax = new Vector2(0.68f, 0.22f);
+                existingRect.anchorMin = new Vector2(0.62f, 0.38f);
+                existingRect.anchorMax = new Vector2(0.62f, 0.38f);
                 existingRect.pivot = new Vector2(0.5f, 0.5f);
-                existingRect.anchoredPosition = new Vector2(12f, 8f);
+                existingRect.anchoredPosition = new Vector2(8f, 24f);
                 existingRect.sizeDelta = new Vector2(FighterRigSize.x + 40f, FighterRigSize.y + 40f);
                 return;
             }

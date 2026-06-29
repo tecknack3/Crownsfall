@@ -11,6 +11,8 @@ namespace Crownsfall.Combat
         public string PlayerName;
         public int WavesCleared;
         public int TotalWaves;
+        /// <summary>Peak wave reached this run (equals WavesCleared until endless mode).</summary>
+        public int HighestWave;
         public int FinalScore;
         public int GoldEarned;
         public int XpEarned;

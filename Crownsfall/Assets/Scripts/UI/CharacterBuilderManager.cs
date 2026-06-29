@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using Crownsfall.Characters;
 using Crownsfall.Combat;
@@ -63,6 +64,9 @@ namespace Crownsfall.UI
         [Header("Fighter Name")]
         public TMP_InputField fighterNameInput;
 
+        [Tooltip("Optional. Shows validation errors such as missing fighter name.")]
+        public TMP_Text fighterNameValidationText;
+
         [Header("Preview")]
         [Tooltip("Optional layered preview rig. When assigned, individual preview Images below are skipped.")]
         public FighterRig characterBuilderPreviewRig;
@@ -127,13 +131,33 @@ namespace Crownsfall.UI
         // The fighter created on the last Create Fighter click.
         private PlayerFighter _currentFighter;
 
+        private FighterCardUI _fighterCardUI;
+
+        private TMP_Text _runtimeValidationText;
+
+        private const string MissingFighterNameDialogTitle = "Name Required";
+        private const string MissingFighterNameDialogMessage =
+            "Please enter a fighter name before creating your fighter.";
+
         private void Start()
         {
+            EnsureFighterCardUi();
+
             // Hook up button clicks so the manager responds to player input.
             WireButtonListeners();
+            EnsureFighterNameValidationText();
+
+            if (fighterNameInput != null)
+            {
+                fighterNameInput.onValueChanged.AddListener(_ => ClearFighterNameValidationMessage());
+            }
 
             // Fighter card starts hidden until the player creates a fighter.
-            if (fighterCardPanel != null)
+            if (_fighterCardUI != null)
+            {
+                _fighterCardUI.Hide();
+            }
+            else if (fighterCardPanel != null)
             {
                 fighterCardPanel.SetActive(false);
             }
@@ -395,15 +419,12 @@ namespace Crownsfall.UI
 
         private void OnCreateFighterClicked()
         {
-            // Read the name the player typed (or use a default if empty).
-            var fighterName = fighterNameInput != null
-                ? fighterNameInput.text.Trim()
-                : string.Empty;
-
-            if (string.IsNullOrEmpty(fighterName))
+            if (!ValidateFighterNameOrShowDialog())
             {
-                fighterName = "Unnamed Fighter";
+                return;
             }
+
+            var fighterName = fighterNameInput.text.Trim();
 
             // Pull the currently selected equipment from each list.
             var head = GetItemAt(heads, headIndex);
@@ -442,7 +463,13 @@ namespace Crownsfall.UI
                 return;
             }
 
-            // Card preview uses the same equipment icons as the builder preview.
+            if (_fighterCardUI != null)
+            {
+                _fighterCardUI.Show(fighter);
+                return;
+            }
+
+            // Legacy fallback when FighterCardUI is not present.
             UpdatePreviewImage(cardMountImage, fighter.mount?.icon);
             UpdatePreviewImage(cardBodyImage, fighter.body?.icon);
             UpdatePreviewImage(cardWeaponImage, fighter.weapon?.icon);
@@ -483,10 +510,58 @@ namespace Crownsfall.UI
         }
 
         /// <summary>
+        /// Ensures the mobile fighter card UI exists and wires manager references to it.
+        /// </summary>
+        private void EnsureFighterCardUi()
+        {
+            if (fighterCardPanel == null)
+            {
+                return;
+            }
+
+            _fighterCardUI = fighterCardPanel.GetComponent<FighterCardUI>();
+            if (_fighterCardUI == null)
+            {
+                _fighterCardUI = fighterCardPanel.AddComponent<FighterCardUI>();
+            }
+
+            _fighterCardUI.EnsureBuilt();
+            BindFighterCardReferences(_fighterCardUI);
+        }
+
+        private void BindFighterCardReferences(FighterCardUI cardUi)
+        {
+            if (cardUi == null)
+            {
+                return;
+            }
+
+            cardMountImage = cardUi.cardMountImage;
+            cardBodyImage = cardUi.cardBodyImage;
+            cardWeaponImage = cardUi.cardWeaponImage;
+            cardHeadImage = cardUi.cardHeadImage;
+            cardFighterNameText = cardUi.cardFighterNameText;
+            cardAttackText = cardUi.cardAttackText;
+            cardDefenseText = cardUi.cardDefenseText;
+            cardSpeedText = cardUi.cardSpeedText;
+            cardHealthText = cardUi.cardHealthText;
+            cardPowerSummaryText = cardUi.cardPowerSummaryText;
+            cardSkillsSummaryText = cardUi.cardSkillsSummaryText;
+            startBattleButton = cardUi.startBattleButton;
+            backEditButton = cardUi.backEditButton;
+        }
+
+        /// <summary>
         /// Hides the fighter card and returns to the builder screen.
         /// </summary>
         private void OnBackEditClicked()
         {
+            if (_fighterCardUI != null)
+            {
+                _fighterCardUI.Hide();
+                return;
+            }
+
             if (fighterCardPanel != null)
             {
                 fighterCardPanel.SetActive(false);
@@ -498,8 +573,15 @@ namespace Crownsfall.UI
         /// </summary>
         private void OnStartBattleClicked()
         {
+            if (!ValidateFighterNameOrShowDialog())
+            {
+                return;
+            }
+
+            var fighterName = fighterNameInput.text.Trim();
+
             // Make sure we have a fighter (build from UI if Create was skipped).
-            var fighter = EnsureCurrentFighter();
+            var fighter = EnsureCurrentFighter(fighterName);
             if (fighter == null)
             {
                 Debug.LogWarning("Start Battle: no fighter to send. Create a fighter first.");
@@ -515,30 +597,24 @@ namespace Crownsfall.UI
 
         /// <summary>
         /// Returns _currentFighter, or builds one from the current UI selections if needed.
+        /// Caller must supply a non-empty trimmed fighter name.
         /// </summary>
-        private PlayerFighter EnsureCurrentFighter()
+        private PlayerFighter EnsureCurrentFighter(string fighterName)
         {
             if (_currentFighter != null)
             {
+                _currentFighter.fighterName = fighterName;
                 return _currentFighter;
             }
 
             if (FighterSessionData.CurrentFighter != null)
             {
                 _currentFighter = FighterSessionData.CurrentFighter;
+                _currentFighter.fighterName = fighterName;
                 return _currentFighter;
             }
 
             // Build from whatever is selected on screen (same logic as Create Fighter).
-            var fighterName = fighterNameInput != null
-                ? fighterNameInput.text.Trim()
-                : string.Empty;
-
-            if (string.IsNullOrEmpty(fighterName))
-            {
-                fighterName = "Unnamed Fighter";
-            }
-
             _currentFighter = new PlayerFighter();
             _currentFighter.fighterName = fighterName;
             _currentFighter.head = GetItemAt(heads, headIndex);
@@ -548,6 +624,143 @@ namespace Crownsfall.UI
             _currentFighter.CalculateStats();
 
             return _currentFighter;
+        }
+
+        /// <summary>
+        /// Reads and trims the fighter name input. Returns false when empty or whitespace.
+        /// </summary>
+        private bool TryGetTrimmedFighterName(out string fighterName)
+        {
+            fighterName = fighterNameInput != null
+                ? fighterNameInput.text.Trim()
+                : string.Empty;
+
+            return !string.IsNullOrEmpty(fighterName);
+        }
+
+        /// <summary>
+        /// Validates the trimmed fighter name and shows a modal dialog when missing.
+        /// </summary>
+        private bool ValidateFighterNameOrShowDialog()
+        {
+            if (TryGetTrimmedFighterName(out _))
+            {
+                ClearFighterNameValidationMessage();
+                return true;
+            }
+
+            if (fighterCardPanel != null && fighterCardPanel.activeSelf)
+            {
+                fighterCardPanel.SetActive(false);
+            }
+
+            ShowMissingFighterNameDialog();
+            return false;
+        }
+
+        /// <summary>
+        /// Presents the name-required dialog using the shared SimpleDialogUI overlay.
+        /// </summary>
+        private void ShowMissingFighterNameDialog()
+        {
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+            {
+                canvas = FindObjectOfType<Canvas>();
+            }
+
+            if (canvas == null)
+            {
+                Debug.LogWarning(MissingFighterNameDialogMessage);
+                FocusFighterNameInput();
+                return;
+            }
+
+            SimpleDialogUI.Show(
+                canvas.transform,
+                MissingFighterNameDialogTitle,
+                MissingFighterNameDialogMessage,
+                "OK",
+                FocusFighterNameInput);
+        }
+
+        /// <summary>
+        /// Selects and activates the fighter name input after the dialog closes.
+        /// </summary>
+        private void FocusFighterNameInput()
+        {
+            if (fighterNameInput == null)
+            {
+                return;
+            }
+
+            StartCoroutine(FocusFighterNameInputNextFrame());
+        }
+
+        private IEnumerator FocusFighterNameInputNextFrame()
+        {
+            yield return null;
+
+            if (fighterNameInput == null)
+            {
+                yield break;
+            }
+
+            fighterNameInput.Select();
+            fighterNameInput.ActivateInputField();
+        }
+
+        /// <summary>
+        /// Hides the fighter name validation message after a successful action.
+        /// </summary>
+        private void ClearFighterNameValidationMessage()
+        {
+            var label = fighterNameValidationText != null
+                ? fighterNameValidationText
+                : _runtimeValidationText;
+
+            if (label == null)
+            {
+                return;
+            }
+
+            label.text = string.Empty;
+            label.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Creates a small validation label under the name input when none is wired in the Inspector.
+        /// </summary>
+        private void EnsureFighterNameValidationText()
+        {
+            if (fighterNameValidationText != null || fighterNameInput == null || _runtimeValidationText != null)
+            {
+                return;
+            }
+
+            var parent = fighterNameInput.transform.parent;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var validationObject = new GameObject("FighterNameValidationText", typeof(RectTransform));
+            validationObject.transform.SetParent(parent, false);
+
+            var layoutElement = validationObject.AddComponent<LayoutElement>();
+            layoutElement.preferredHeight = 36f;
+            layoutElement.flexibleWidth = 1f;
+
+            _runtimeValidationText = validationObject.AddComponent<TextMeshProUGUI>();
+            _runtimeValidationText.font = fighterNameInput.textComponent != null
+                ? fighterNameInput.textComponent.font
+                : null;
+            _runtimeValidationText.fontSize = 24f;
+            _runtimeValidationText.color = new Color(0.95f, 0.45f, 0.42f, 1f);
+            _runtimeValidationText.alignment = TextAlignmentOptions.MidlineLeft;
+            _runtimeValidationText.raycastTarget = false;
+            _runtimeValidationText.text = string.Empty;
+            validationObject.SetActive(false);
         }
 
         // --- Shared UI helpers ---

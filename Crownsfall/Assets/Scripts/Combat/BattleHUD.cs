@@ -14,10 +14,15 @@ namespace Crownsfall.Combat
     /// </summary>
     public class BattleHUD : MonoBehaviour
     {
+        private const string DefaultTitle = "CROWNSFALL";
+
         [Header("Top Bar")]
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text waveText;
         [SerializeField] private TMP_Text scoreText;
+
+        [Tooltip("When > 0, wave label uses \"Wave 1 / 3\" format. Matches BattleManager victoryWaveNumber for MVP.")]
+        [SerializeField] private int displayTotalWaves = 3;
 
         [Header("Battle Log")]
         [SerializeField] private TMP_Text battleLogText;
@@ -33,8 +38,14 @@ namespace Crownsfall.Combat
         [Tooltip("The green/red fill child inside EnemyHealthBar.")]
         [SerializeField] private Image enemyHealthBarFill;
 
+        [Tooltip("Optional HP label centered on/near the player health bar.")]
+        [SerializeField] private TMP_Text playerHealthBarText;
+
+        [Tooltip("Optional HP label centered on/near the enemy health bar.")]
+        [SerializeField] private TMP_Text enemyHealthBarText;
+
         [Tooltip("Maximum log lines kept on screen before older lines drop off.")]
-        [SerializeField] private int maxLogLines = 6;
+        [SerializeField] private int maxLogLines = 5;
 
         [Header("Game Over Panel")]
         [Tooltip("Full-screen overlay shown when the player is defeated. Hidden at battle start.")]
@@ -71,6 +82,11 @@ namespace Crownsfall.Combat
             {
                 characterBuilderButton.onClick.AddListener(OnCharacterBuilderClicked);
             }
+
+            if (titleText != null && string.IsNullOrEmpty(titleText.text))
+            {
+                titleText.text = DefaultTitle;
+            }
         }
 
         /// <summary>
@@ -86,7 +102,7 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
-        /// Updates the wave label in the top bar (e.g. "Wave 3").
+        /// Updates the wave label in the top bar (e.g. "Wave 1 / 3").
         /// </summary>
         public void SetWave(int wave)
         {
@@ -94,11 +110,12 @@ namespace Crownsfall.Combat
         }
 
         /// <summary>
-        /// Updates the wave label; boss waves show "Wave 10 - BOSS".
+        /// Updates the wave label; boss waves append "- BOSS".
         /// </summary>
         public void SetWave(int wave, bool isBoss)
         {
-            var label = isBoss ? $"Wave {wave} - BOSS" : $"Wave {wave}";
+            var total = displayTotalWaves > 0 ? displayTotalWaves : wave;
+            var label = isBoss ? $"Wave {wave} / {total} - BOSS" : $"Wave {wave} / {total}";
             SetText(waveText, label);
         }
 
@@ -115,7 +132,7 @@ namespace Crownsfall.Combat
         /// </summary>
         public void SetPlayerStats(PlayerFighter fighter)
         {
-            SetText(playerStatsText, BuildStatsBlock(fighter));
+            SetText(playerStatsText, BuildStatsBlock(fighter, isPlayer: true));
         }
 
         /// <summary>
@@ -123,7 +140,7 @@ namespace Crownsfall.Combat
         /// </summary>
         public void SetEnemyStats(PlayerFighter fighter)
         {
-            SetText(enemyStatsText, BuildStatsBlock(fighter));
+            SetText(enemyStatsText, BuildStatsBlock(fighter, isPlayer: false));
         }
 
         /// <summary>
@@ -140,6 +157,7 @@ namespace Crownsfall.Combat
         public void SetPlayerHealth(float current, float max)
         {
             SetHealthFill(playerHealthBarFill, current, max);
+            SetHealthText(playerHealthBarText, current, max);
         }
 
         /// <summary>
@@ -148,6 +166,7 @@ namespace Crownsfall.Combat
         public void SetEnemyHealth(float current, float max)
         {
             SetHealthFill(enemyHealthBarFill, current, max);
+            SetHealthText(enemyHealthBarText, current, max);
         }
 
         /// <summary>
@@ -202,7 +221,7 @@ namespace Crownsfall.Combat
         /// </summary>
         public void SetTitle(string title)
         {
-            SetText(titleText, title);
+            SetText(titleText, string.IsNullOrEmpty(title) ? DefaultTitle : title);
         }
 
         /// <summary>
@@ -267,7 +286,7 @@ namespace Crownsfall.Combat
         /// <summary>
         /// Builds a multi-line stat string for one fighter.
         /// </summary>
-        private static string BuildStatsBlock(PlayerFighter fighter)
+        private static string BuildStatsBlock(PlayerFighter fighter, bool isPlayer)
         {
             if (fighter == null)
             {
@@ -280,7 +299,8 @@ namespace Crownsfall.Combat
                 fighter.defense,
                 fighter.speed,
                 fighter.currentHealth,
-                fighter.maxHealth);
+                fighter.maxHealth,
+                isPlayer);
         }
 
         /// <summary>
@@ -299,11 +319,12 @@ namespace Crownsfall.Combat
                 enemy.defense,
                 enemy.speed,
                 enemy.currentHealth,
-                enemy.maxHealth);
+                enemy.maxHealth,
+                isPlayer: false);
         }
 
         /// <summary>
-        /// Shared three-line mobile layout: name, ATK/DEF row, SPD/HP row.
+        /// Mobile stat card: name plus ATK, DEF, SPD, and HP on separate lines.
         /// </summary>
         private static string BuildStatsBlock(
             string name,
@@ -311,11 +332,17 @@ namespace Crownsfall.Combat
             int defense,
             int speed,
             int currentHealth,
-            int maxHealth)
+            int maxHealth,
+            bool isPlayer)
         {
-            return $"{name}\n" +
-                   $"ATK {attack}   DEF {defense}\n" +
-                   $"SPD {speed}   HP {currentHealth}/{maxHealth}";
+            var nameColor = isPlayer ? "#7ddf8a" : "#f07070";
+            var safeName = string.IsNullOrEmpty(name) ? "—" : name;
+
+            return $"<color={nameColor}><b>{safeName}</b></color>\n" +
+                   $"ATK {attack}\n" +
+                   $"DEF {defense}\n" +
+                   $"SPD {speed}\n" +
+                   $"HP {currentHealth}/{maxHealth}";
         }
 
         /// <summary>
@@ -330,6 +357,21 @@ namespace Crownsfall.Combat
 
             var fillAmount = max > 0f ? Mathf.Clamp01(current / max) : 0f;
             fillImage.fillAmount = fillAmount;
+        }
+
+        /// <summary>
+        /// Updates the numeric HP label (e.g. "269 / 270") on or near a health bar.
+        /// </summary>
+        private static void SetHealthText(TMP_Text healthText, float current, float max)
+        {
+            if (healthText == null)
+            {
+                return;
+            }
+
+            var currentHp = Mathf.Max(0, Mathf.RoundToInt(current));
+            var maxHp = Mathf.Max(0, Mathf.RoundToInt(max));
+            healthText.text = $"{currentHp} / {maxHp}";
         }
 
         private static void SetText(TMP_Text textField, string value)

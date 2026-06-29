@@ -65,6 +65,7 @@ namespace Crownsfall.Combat
                 PlayerName = _playerName,
                 WavesCleared = wavesCleared,
                 TotalWaves = totalWaves,
+                HighestWave = wavesCleared,
                 FinalScore = finalScore,
                 GoldEarned = _goldEarned,
                 XpEarned = _xpEarned,
