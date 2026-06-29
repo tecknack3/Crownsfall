@@ -73,6 +73,12 @@ namespace Crownsfall.Combat
 
 
 
+        [Header("Battle Summary")]
+
+        [Tooltip("Post-victory summary overlay (Wave 3 only). Auto-created at runtime if left empty.")]
+
+        [SerializeField] private BattleSummaryUI battleSummaryUI;
+
 
 
         [Header("Testing (used when no session data)")]
@@ -555,6 +561,7 @@ namespace Crownsfall.Combat
 
         /// </summary>
 
+        private BattleSummaryTracker _battleSummaryTracker;
 
 
 
@@ -662,6 +669,8 @@ namespace Crownsfall.Combat
             _skillEngine = new SkillEngine();
 
             _playerFighter = BuildPlayerFighter();
+
+            InitializeBattleSummaryTracking();
 
             ApplyDebugPlayerHealthOverride();
 
@@ -1161,6 +1170,10 @@ namespace Crownsfall.Combat
                 targetName: _enemyFighter?.enemyName,
 
                 score: _playerFighter.currentScore);
+
+
+
+            yield return ShowBattleSummaryScreen();
 
         }
 
@@ -5362,6 +5375,8 @@ namespace Crownsfall.Combat
 
 
 
+            EnsureBattleSummaryUiReference();
+
         }
 
 
@@ -5871,6 +5886,10 @@ namespace Crownsfall.Combat
 
 
 
+            _battleSummaryTracker?.RecordWaveRewards(goldAmount, xpAmount);
+
+
+
             if (rewardScreenUI == null)
 
             {
@@ -6040,6 +6059,190 @@ namespace Crownsfall.Combat
 
 
             return string.IsNullOrEmpty(skill.skillName) ? skill.skillType.ToString() : skill.skillName;
+
+        }
+
+
+
+        /// <summary>
+
+        /// Subscribes to combat events for the post-victory summary screen.
+
+        /// </summary>
+
+        private void InitializeBattleSummaryTracking()
+
+        {
+
+            _battleSummaryTracker?.Dispose();
+
+            var playerName = _playerFighter?.fighterName ?? testFighterName;
+
+            _battleSummaryTracker = new BattleSummaryTracker(playerName);
+
+
+
+            if (CombatDebug.TracePresentation)
+
+            {
+
+                Debug.Log($"Battle summary tracking started for {playerName}.");
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Finds BattleSummaryUI in the scene or creates a runtime fallback under the Canvas.
+
+        /// </summary>
+
+        private void EnsureBattleSummaryUiReference()
+
+        {
+
+            if (battleSummaryUI != null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            battleSummaryUI = FindObjectOfType<BattleSummaryUI>();
+
+
+
+            if (battleSummaryUI != null && battleSummaryUI.gameObject.scene != gameObject.scene)
+
+            {
+
+                battleSummaryUI = null;
+
+            }
+
+
+
+            if (battleSummaryUI != null)
+
+            {
+
+                return;
+
+            }
+
+
+
+            var canvas = FindObjectOfType<Canvas>();
+
+            if (canvas == null)
+
+            {
+
+                Debug.LogWarning("BattleSummaryUI not found and no Canvas available for runtime fallback.");
+
+                return;
+
+            }
+
+
+
+            battleSummaryUI = BattleSummaryUI.CreateRuntimePanel(canvas.transform as RectTransform);
+
+
+
+            if (CombatDebug.TracePresentation && battleSummaryUI != null)
+
+            {
+
+                Debug.Log("BattleSummaryUI created at runtime under Canvas.");
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
+        /// Shows the battle summary after final-wave victory. No-op when tracker or UI is missing.
+
+        /// </summary>
+
+        private IEnumerator ShowBattleSummaryScreen()
+
+        {
+
+            EnsureBattleSummaryUiReference();
+
+
+
+            if (_battleSummaryTracker == null || battleSummaryUI == null)
+
+            {
+
+                if (CombatDebug.TracePresentation)
+
+                {
+
+                    Debug.Log("Battle summary skipped — tracker or UI missing.");
+
+                }
+
+
+
+                yield break;
+
+            }
+
+
+
+            var summaryData = _battleSummaryTracker.BuildSummary(
+
+                _waveNumber,
+
+                victoryWaveNumber > 0 ? victoryWaveNumber : _waveNumber,
+
+                _playerFighter.currentScore);
+
+
+
+            if (CombatDebug.TracePresentation)
+
+            {
+
+                Debug.Log(
+
+                    $"Showing battle summary — score {summaryData.FinalScore}, " +
+
+                    $"gold {summaryData.GoldEarned}, xp {summaryData.XpEarned}.");
+
+            }
+
+
+
+            battleSummaryUI.ShowSummary(summaryData);
+
+            yield return battleSummaryUI.WaitForContinue();
+
+            battleSummaryUI.Hide();
+
+        }
+
+
+
+        private void OnDestroy()
+
+        {
+
+            _battleSummaryTracker?.Dispose();
+
+            _battleSummaryTracker = null;
 
         }
 

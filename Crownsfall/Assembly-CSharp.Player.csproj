@@ -66,6 +66,7 @@
     <Compile Include="Assets/Scripts/Combat/ProgressionEngine.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_TextEventHandler.cs" />
     <Compile Include="Assets/Scripts/Characters/EquipmentItemSO.cs" />
+    <Compile Include="Assets/Scripts/Combat/BattleSummaryTracker.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/VertexShakeA.cs" />
     <Compile Include="Assets/Scripts/Combat/Skills/ShieldSkill.cs" />
     <Compile Include="Assets/Scripts/Combat/CombatDebug.cs" />
@@ -130,9 +131,11 @@
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/CameraController.cs" />
     <Compile Include="Assets/Scripts/Characters/BodySO.cs" />
     <Compile Include="Assets/Scripts/UI/FighterPreview.cs" />
+    <Compile Include="Assets/Scripts/Combat/UI/BattleSummaryUI.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/Benchmark03.cs" />
     <Compile Include="Assets/Scripts/Combat/Skills/ISkillEffect.cs" />
     <Compile Include="Assets/Scripts/Combat/BattleHUD.cs" />
+    <Compile Include="Assets/Scripts/Combat/BattleSummaryData.cs" />
     <Compile Include="Assets/Scripts/UI/CharacterBuilderManager.cs" />
     <Compile Include="Assets/Scripts/Combat/Events/CombatLogUIListener.cs" />
     <Compile Include="Assets/Scripts/Combat/FighterRig.cs" />
