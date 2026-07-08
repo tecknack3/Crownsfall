@@ -1667,6 +1667,8 @@ namespace Crownsfall.Combat
 
                 Debug.Log($"[TRACE] PLAYER STRIKE TYPE | strike={strikeType}");
 
+            _battleSummaryTracker?.RecordPlayerStrike(strikeType == AttackStrikeType.Kick);
+
 
 
             // Idle → step forward → punch OR kick (root holds at step position).
@@ -6172,6 +6174,56 @@ namespace Crownsfall.Combat
 
         /// <summary>
 
+        /// Shows a level-up modal before the battle summary when the player gained levels.
+
+        /// </summary>
+
+        private IEnumerator ShowLevelUpDialog(int previousLevel, int newLevel)
+
+        {
+
+            var canvas = FindObjectOfType<Canvas>();
+
+            if (canvas == null)
+
+            {
+
+                yield break;
+
+            }
+
+
+
+            var dismissed = false;
+
+            SimpleDialogUI.Show(
+
+                canvas.transform,
+
+                "LEVEL UP!",
+
+                $"Level {previousLevel} → Level {newLevel}",
+
+                "Continue",
+
+                () => dismissed = true);
+
+
+
+            while (!dismissed)
+
+            {
+
+                yield return null;
+
+            }
+
+        }
+
+
+
+        /// <summary>
+
         /// Shows the battle summary after final-wave victory. No-op when tracker or UI is missing.
 
         /// </summary>
@@ -6216,6 +6268,13 @@ namespace Crownsfall.Combat
 
             LocalRunResultStore.RecordRun(summaryData);
 
+            var profileLevelBefore = PlayerProfileManager.Profile.Level;
+            var levelsGained = PlayerProfileManager.ApplyBattleResult(
+                summaryData,
+                playerWon: true,
+                _battleSummaryTracker.PunchCount,
+                _battleSummaryTracker.KickCount);
+
 
 
             if (CombatDebug.TracePresentation)
@@ -6237,6 +6296,16 @@ namespace Crownsfall.Combat
             {
 
                 rewardScreenUI.Hide();
+
+            }
+
+
+
+            if (levelsGained > 0)
+
+            {
+
+                yield return ShowLevelUpDialog(profileLevelBefore, PlayerProfileManager.Profile.Level);
 
             }
 

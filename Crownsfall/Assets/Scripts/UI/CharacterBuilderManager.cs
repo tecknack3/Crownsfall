@@ -96,6 +96,9 @@ namespace Crownsfall.UI
         public TMP_Text mountNameText;
 
         [Header("Player Record")]
+        [Tooltip("Optional. Compact profile card above best-run stats. Built at runtime when missing.")]
+        public PlayerProfileUI playerProfileUI;
+
         [Tooltip("Optional. Compact best-run card below the title. Built at runtime when missing.")]
         public PlayerRecordUI playerRecordUI;
 
@@ -146,7 +149,9 @@ namespace Crownsfall.UI
 
         private void Start()
         {
+            EnsurePlayerProfileUi();
             EnsurePlayerRecordUi();
+            RefreshPlayerProfileDisplay();
             RefreshPlayerRecordDisplay();
 
             EnsureFighterCardUi();
@@ -518,6 +523,52 @@ namespace Crownsfall.UI
         }
 
         /// <summary>
+        /// Ensures the player profile card exists under MainLayout (below title, above best run).
+        /// </summary>
+        private void EnsurePlayerProfileUi()
+        {
+            if (playerProfileUI != null)
+            {
+                playerProfileUI.EnsureBuilt();
+                return;
+            }
+
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+            {
+                canvas = FindObjectOfType<Canvas>();
+            }
+
+            if (canvas == null)
+            {
+                return;
+            }
+
+            var mainLayout = canvas.transform.Find("MainLayout");
+            if (mainLayout == null)
+            {
+                return;
+            }
+
+            var titleTransform = mainLayout.Find("Title") ?? mainLayout.Find("TitleText");
+            playerProfileUI = PlayerProfileUI.EnsureOnCanvas(mainLayout, titleTransform);
+        }
+
+        /// <summary>
+        /// Loads the persistent profile and fills the profile card.
+        /// </summary>
+        private void RefreshPlayerProfileDisplay()
+        {
+            if (playerProfileUI == null)
+            {
+                return;
+            }
+
+            var profile = PlayerProfileManager.Load();
+            playerProfileUI.Display(profile);
+        }
+
+        /// <summary>
         /// Ensures the personal-best record card exists under MainLayout (below title).
         /// </summary>
         private void EnsurePlayerRecordUi()
@@ -545,8 +596,10 @@ namespace Crownsfall.UI
                 return;
             }
 
+            var profileTransform = mainLayout.Find("PlayerProfilePanel");
             var titleTransform = mainLayout.Find("Title") ?? mainLayout.Find("TitleText");
-            playerRecordUI = PlayerRecordUI.EnsureOnCanvas(mainLayout, titleTransform);
+            var insertAfter = profileTransform != null ? profileTransform : titleTransform;
+            playerRecordUI = PlayerRecordUI.EnsureOnCanvas(mainLayout, insertAfter);
         }
 
         /// <summary>

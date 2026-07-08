@@ -25,8 +25,13 @@ namespace Crownsfall.Combat
         private int _xpEarned;
         private int _damageDealt;
         private int _damageTaken;
+        private int _punches;
+        private int _kicks;
         private readonly Dictionary<SkillType, int> _skillActivations = new Dictionary<SkillType, int>();
         private bool _disposed;
+
+        public int PunchCount => _punches;
+        public int KickCount => _kicks;
 
         public BattleSummaryTracker(string playerName)
         {
@@ -39,6 +44,28 @@ namespace Crownsfall.Combat
             }
 
             CombatEventBus.OnCombatEvent += HandleCombatEvent;
+        }
+
+        /// <summary>
+        /// Records a player strike type for lifetime profile stats.
+        /// </summary>
+        public void RecordPlayerStrike(bool isKick)
+        {
+            if (isKick)
+            {
+                _kicks++;
+            }
+            else
+            {
+                _punches++;
+            }
+
+            if (CombatDebug.TracePresentation)
+            {
+                Debug.Log(
+                    $"BattleSummaryTracker: player {(isKick ? "kick" : "punch")} " +
+                    $"(totals punches={_punches}, kicks={_kicks}).");
+            }
         }
 
         /// <summary>

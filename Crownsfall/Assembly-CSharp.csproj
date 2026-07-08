@@ -96,6 +96,8 @@
     <Compile Include="Assets/Scripts/Characters/EquipmentSkill.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_PhoneNumberValidator.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/VertexJitter.cs" />
+    <Compile Include="Assets/Scripts/Progress/PlayerProfile.cs" />
+    <Compile Include="Assets/Scripts/UI/PlayerProfileUI.cs" />
     <Compile Include="Assets/Scripts/Characters/WeaponSO.cs" />
     <Compile Include="Assets/Scripts/Combat/UI/FloatingCombatTextSpawner.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_DigitValidator.cs" />
@@ -136,6 +138,7 @@
     <Compile Include="Assets/Scripts/Characters/BodySO.cs" />
     <Compile Include="Assets/Scripts/UI/FighterPreview.cs" />
     <Compile Include="Assets/Scripts/Combat/UI/BattleSummaryUI.cs" />
+    <Compile Include="Assets/Scripts/Progress/PlayerProfileManager.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/Benchmark03.cs" />
     <Compile Include="Assets/Scripts/Combat/Skills/ISkillEffect.cs" />
     <Compile Include="Assets/Scripts/Combat/BattleHUD.cs" />
